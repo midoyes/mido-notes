@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:ui' show PlatformDispatcher;
 
 import 'package:cryptography_flutter/cryptography_flutter.dart';
 import 'package:flutter/material.dart';
@@ -9,8 +10,32 @@ import 'ui/home_screen.dart';
 import 'ui/lock_guard.dart';
 import 'i18n.dart';
 
+/// 把錯誤寫到桌面的 mido_error.log，方便回報問題（只記錄錯誤，不含筆記內容）。
+void _logError(Object error, StackTrace? stack) {
+  try {
+    final home = Platform.environment['USERPROFILE'] ??
+        Platform.environment['HOME'] ??
+        Directory.systemTemp.path;
+    final sep = Platform.isWindows ? '\\' : '/';
+    final dir = Platform.isWindows ? '$home${sep}Desktop' : home;
+    final f = File('$dir${sep}mido_error.log');
+    f.writeAsStringSync(
+      '${DateTime.now()}\n$error\n$stack\n\n',
+      mode: FileMode.append,
+    );
+  } catch (_) {}
+}
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  FlutterError.onError = (d) {
+    FlutterError.presentError(d);
+    _logError(d.exception, d.stack);
+  };
+  PlatformDispatcher.instance.onError = (e, st) {
+    _logError(e, st);
+    return true;
+  };
   if (Platform.isAndroid || Platform.isIOS || Platform.isMacOS) {
     FlutterCryptography.enable(); // 使用原生加密實作，PBKDF2 才不會太慢
   }

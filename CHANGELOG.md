@@ -1,5 +1,11 @@
 # 更新紀錄
 
+## 1.8.3
+- 修正 1.8.1／1.8.2 解鎖後無法開啟任何筆記與設定的問題（Windows、Android 都會發生）。
+
+English:
+- Fixed notes and Settings not opening after unlock in 1.8.1 / 1.8.2 (affected Windows and Android).
+
 ## 1.8.2
 - Markdown 預覽新增表格：支援 `|` 格式的表格，也支援從網頁複製的 Tab 分隔表格。
 - 程式碼區塊改成深色底、等寬字，保留縮排與換行，並有「複製」按鈕，方便貼上 AI 產生的 bash 腳本。

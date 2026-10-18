@@ -9,6 +9,11 @@ class ChangelogEntry {
 
 const List<ChangelogEntry> kChangelog = <ChangelogEntry>[
   ChangelogEntry(
+    '1.8.3',
+    ['修正 1.8.1／1.8.2 解鎖後無法開啟任何筆記與設定的問題。'],
+    ['Fixed notes and Settings not opening after unlock in 1.8.1 / 1.8.2.'],
+  ),
+  ChangelogEntry(
     '1.8.2',
     [
       'Markdown 預覽新增表格：支援 | 格式的表格，也支援從網頁複製的 Tab 分隔表格。',

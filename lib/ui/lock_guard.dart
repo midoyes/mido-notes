@@ -116,9 +116,14 @@ class _LockGuardState extends State<LockGuard> with WidgetsBindingObserver {
               // 這一層在 MaterialApp 的 Navigator 外面，所以鎖定畫面要自己帶一個
               // Navigator，否則 showDialog 找不到 Navigator 而什麼都不會發生
               // （例如按「不設定密碼」沒有反應）。
-              child: Navigator(
-                onGenerateRoute: (_) => MaterialPageRoute<void>(
-                  builder: (_) => const LockScreen(),
+              // 一定要用 HeroControllerScope.none：不然這個 Navigator 會搶走
+              // MaterialApp 共用的 HeroController，解鎖後主 Navigator 再開啟
+              // 任何頁面（筆記、設定）都會出錯。
+              child: HeroControllerScope.none(
+                child: Navigator(
+                  onGenerateRoute: (_) => MaterialPageRoute<void>(
+                    builder: (_) => const LockScreen(),
+                  ),
                 ),
               ),
             ),
