@@ -1,0 +1,89 @@
+name: Build APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Generate Android scaffold and apply patches
+        run: |
+          flutter --version
+          flutter create --platforms=android --org com.midoyes --project-name mido_notes --no-pub /tmp/scaffold
+          rm -rf android
+          cp -r /tmp/scaffold/android ./android
+          python3 tool/patch_android.py
+
+      - name: Get packages
+        run: flutter pub get
+
+      - name: Analyze (informational)
+        run: flutter analyze
+        continue-on-error: true
+
+      - name: Build release APK
+        run: flutter build apk --release
+
+      - name: Sign APK
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          cp build/app/outputs/flutter-apk/app-release.apk Mido-notes.apk
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
+            APKSIGNER=$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)
+            "$APKSIGNER" sign \
+              --ks "$RUNNER_TEMP/release.jks" \
+              --ks-key-alias "$KEY_ALIAS" \
+              --ks-pass env:KEYSTORE_PASSWORD \
+              --key-pass env:KEY_PASSWORD \
+              Mido-notes.apk
+            "$APKSIGNER" verify --print-certs Mido-notes.apk
+            rm -f "$RUNNER_TEMP/release.jks"
+          else
+            echo "::warning::沒有設定簽章 secrets，這個 APK 使用除錯簽章，之後換簽章需要先解除安裝舊版。"
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Mido-notes-apk
+          path: Mido-notes.apk
+          retention-days: 30
+
+      - name: Publish to GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VER=$(grep '^version:' pubspec.yaml | sed 's/version: *//; s/+.*//' | tr -d '\r ')
+          TAG="v$VER"
+          NOTES=$(awk -v v="## $VER" 'found && /^## /{exit} index($0,v)==1{found=1; next} found' CHANGELOG.md 2>/dev/null || true)
+          if [ -z "$NOTES" ]; then NOTES="Automated build. APK = Android, ZIP = Windows."; fi
+          gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "Mido Notes $TAG" --notes "$NOTES" --latest || true
+          gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --notes "$NOTES" || true
+          gh release upload "$TAG" Mido-notes.apk --repo "$GITHUB_REPOSITORY" --clobber
+          # 補上所有舊版本的更新說明（對應版本的 Release 存在才會更新）
+          for V in $(grep '^## ' CHANGELOG.md | sed 's/^## *//' | tr -d '\r' | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$'); do
+            N=$(awk -v v="## $V" 'found && /^## /{exit} index($0,v)==1{found=1; next} found' CHANGELOG.md)
+            gh release edit "v$V" --repo "$GITHUB_REPOSITORY" --notes "$N" 2>/dev/null || true
+          done
