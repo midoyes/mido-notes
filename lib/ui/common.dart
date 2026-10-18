@@ -113,7 +113,7 @@ Future<bool> confirmDialog(
   BuildContext context, {
   required String title,
   required String message,
-  String confirmText = tr('確定'),
+  String? confirmText,
   bool danger = false,
 }) async {
   final r = await showDialog<bool>(
@@ -134,7 +134,7 @@ Future<bool> confirmDialog(
                 )
               : null,
           onPressed: () => Navigator.pop(ctx, true),
-          child: Text(confirmText),
+          child: Text(confirmText ?? tr('確定')),
         ),
       ],
     ),
@@ -325,7 +325,7 @@ Future<String?> _askPw(
   required String title,
   String? message,
   bool confirm = false,
-  String label = tr('鎖定密碼'),
+  String? label,
 }) {
   final a = TextEditingController();
   final b = TextEditingController();
@@ -380,7 +380,7 @@ Future<String?> _askPw(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 if (message != null) Text(message),
-                field(a, label, last: !confirm),
+                field(a, label ?? tr('鎖定密碼'), last: !confirm),
                 if (confirm) field(b, tr('再次輸入'), last: true),
                 if (error != null)
                   Padding(
@@ -406,14 +406,14 @@ Future<String?> _askPw(
 /// 輸入並驗證「鎖定密碼」。通過回傳 true；取消回傳 false。
 Future<bool> askLockPassword(
   BuildContext context, {
-  String title = tr('輸入鎖定密碼'),
+  String? title,
   String? message,
 }) async {
   var tries = 0;
   while (true) {
     final pw = await _askPw(
       context,
-      title: title,
+      title: title ?? tr('輸入鎖定密碼'),
       message: tries == 0 ? message : tr('密碼不正確，請再試一次。'),
     );
     if (pw == null || !context.mounted) return false;
