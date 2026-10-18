@@ -1,0 +1,72 @@
+name: Build Windows
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 40
+    permissions:
+      contents: write
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Generate Windows scaffold and apply patches
+        run: |
+          flutter --version
+          flutter config --enable-windows-desktop
+          flutter create --platforms=windows --org com.midoyes --project-name mido_notes --no-pub scaffold_win
+          rm -rf windows
+          cp -r scaffold_win/windows ./windows
+          rm -rf scaffold_win
+          python tool/patch_windows.py
+
+      - name: Get packages
+        run: flutter pub get
+
+      - name: Build Windows release
+        run: flutter build windows --release
+
+      - name: Package
+        run: |
+          OUT=build/windows/x64/runner/Release
+          for f in msvcp140.dll vcruntime140.dll vcruntime140_1.dll; do
+            cp "/c/Windows/System32/$f" "$OUT/" || true
+          done
+          mkdir -p dist
+          powershell -NoProfile -Command "Compress-Archive -Path '$OUT/*' -DestinationPath 'dist/Mido-notes-windows.zip'"
+          ls -la dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Mido-notes-windows
+          path: dist/Mido-notes-windows.zip
+          if-no-files-found: error
+
+      - name: Publish to GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VER=$(grep '^version:' pubspec.yaml | sed 's/version: *//; s/+.*//' | tr -d '\r ')
+          TAG="v$VER"
+          NOTES=$(awk -v v="## $VER" 'found && /^## /{exit} index($0,v)==1{found=1; next} found' CHANGELOG.md 2>/dev/null || true)
+          if [ -z "$NOTES" ]; then NOTES="Automated build. APK = Android, ZIP = Windows."; fi
+          gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "Mido Notes $TAG" --notes "$NOTES" --latest || true
+          gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --notes "$NOTES" || true
+          gh release upload "$TAG" dist/Mido-notes-windows.zip --repo "$GITHUB_REPOSITORY" --clobber
+          # 補上所有舊版本的更新說明（對應版本的 Release 存在才會更新）
+          for V in $(grep '^## ' CHANGELOG.md | sed 's/^## *//' | tr -d '\r' | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$'); do
+            N=$(awk -v v="## $V" 'found && /^## /{exit} index($0,v)==1{found=1; next} found' CHANGELOG.md)
+            gh release edit "v$V" --repo "$GITHUB_REPOSITORY" --notes "$N" 2>/dev/null || true
+          done
