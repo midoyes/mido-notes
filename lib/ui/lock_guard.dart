@@ -113,10 +113,13 @@ class _LockGuardState extends State<LockGuard> with WidgetsBindingObserver {
           ),
           if (locked)
             Positioned.fill(
-              child: Overlay(
-                initialEntries: [
-                  OverlayEntry(builder: (_) => const LockScreen()),
-                ],
+              // 這一層在 MaterialApp 的 Navigator 外面，所以鎖定畫面要自己帶一個
+              // Navigator，否則 showDialog 找不到 Navigator 而什麼都不會發生
+              // （例如按「不設定密碼」沒有反應）。
+              child: Navigator(
+                onGenerateRoute: (_) => MaterialPageRoute<void>(
+                  builder: (_) => const LockScreen(),
+                ),
               ),
             ),
         ],

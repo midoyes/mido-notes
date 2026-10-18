@@ -9,6 +9,17 @@ class ChangelogEntry {
 
 const List<ChangelogEntry> kChangelog = <ChangelogEntry>[
   ChangelogEntry(
+    '1.8.1',
+    [
+      '修正第一次開啟時按「不設定密碼，直接使用」沒有反應的問題。',
+      '修正鎖定畫面上的對話框（例如從備份檔還原時輸入備份密碼）可能無法開啟的問題。',
+    ],
+    [
+      'Fixed "Use without a password" doing nothing on first launch.',
+      'Fixed dialogs on the lock screen (e.g. entering the backup password when restoring) not opening.',
+    ],
+  ),
+  ChangelogEntry(
     '1.8.0',
     [
       '移除 Google Drive 自動同步，改為手動匯出／匯入加密備份檔。',
