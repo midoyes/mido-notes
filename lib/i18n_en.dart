@@ -131,6 +131,7 @@ const Map<String, String> kEn = <String, String>{
   '已經是最新版本': 'You are up to date',
   '已經有備份檔？從備份檔還原': 'Already have a backup file? Restore from it',
   '已複製{}，30 秒後自動清除剪貼簿': '{} copied; the clipboard will be cleared in 30 seconds',
+  '已複製程式碼': 'Code copied',
   '已設定主密碼，下次開啟 App 需要輸入': 'Master password set; you will need it next time you open the app',
   '已設定（可更改或移除）。在筆記的選單裡選「鎖定」即可使用': 'Set (you can change or remove it). Choose "Lock" in a note\'s menu to use it',
   '已還原': 'Restored',

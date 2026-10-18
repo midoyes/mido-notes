@@ -9,6 +9,17 @@ class ChangelogEntry {
 
 const List<ChangelogEntry> kChangelog = <ChangelogEntry>[
   ChangelogEntry(
+    '1.8.2',
+    [
+      'Markdown 預覽新增表格：支援 | 格式的表格，也支援從網頁複製的 Tab 分隔表格。',
+      '程式碼區塊改成深色底、等寬字，保留縮排與換行，並有「複製」按鈕，方便貼上 AI 產生的 bash 腳本。',
+    ],
+    [
+      'Markdown preview now renders tables, both | tables and tab-separated tables copied from web pages.',
+      'Code blocks use a dark monospace style, keep indentation and line breaks, and have a copy button (handy for AI-generated bash scripts).',
+    ],
+  ),
+  ChangelogEntry(
     '1.8.1',
     [
       '修正第一次開啟時按「不設定密碼，直接使用」沒有反應的問題。',

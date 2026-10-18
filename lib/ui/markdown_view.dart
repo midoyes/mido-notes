@@ -1,10 +1,15 @@
+import 'dart:math' show max;
+
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../i18n.dart';
 
 /// 簡易 Markdown 預覽：標題、粗體、斜體、刪除線、行內程式碼、程式碼區塊、
-/// 條列、數字清單、待辦清單、引用、分隔線與連結。全部離線繪製。
+/// 條列、數字清單、待辦清單、引用、分隔線、連結與表格。全部離線繪製。
+/// 程式碼區塊保留原本的縮排與換行，可一鍵複製；以 Tab 分隔的多行文字（從網頁複製表格
+/// 常見的格式）也會顯示成表格。
 class MarkdownView extends StatefulWidget {
   const MarkdownView({super.key, required this.text});
 
@@ -40,6 +45,183 @@ class _MarkdownViewState extends State<MarkdownView> {
     try {
       await launchUrl(u, mode: LaunchMode.externalApplication);
     } catch (_) {}
+  }
+
+
+  // ───────── 表格 ─────────
+
+  static final RegExp _sepCell = RegExp(r'^:?-+:?$');
+
+  List<String> _splitRow(String line) {
+    var s = line.trim();
+    if (s.startsWith('|')) s = s.substring(1);
+    if (s.endsWith('|') && !s.endsWith(r'\|')) s = s.substring(0, s.length - 1);
+    final cells = <String>[];
+    final buf = StringBuffer();
+    var inCode = false;
+    for (var k = 0; k < s.length; k++) {
+      final c = s[k];
+      if (c == r'\' && k + 1 < s.length && s[k + 1] == '|') {
+        buf.write('|');
+        k++;
+        continue;
+      }
+      if (c == '`') inCode = !inCode;
+      if (c == '|' && !inCode) {
+        cells.add(buf.toString().trim());
+        buf.clear();
+        continue;
+      }
+      buf.write(c);
+    }
+    cells.add(buf.toString().trim());
+    return cells;
+  }
+
+  bool _isSeparator(String line) {
+    if (!line.contains('-')) return false;
+    if (!line.contains('|')) return false;
+    final cells = _splitRow(line);
+    if (cells.isEmpty) return false;
+    return cells.every(_sepCell.hasMatch);
+  }
+
+  TextAlign _alignOf(String sep) {
+    final l = sep.startsWith(':');
+    final r = sep.endsWith(':');
+    if (l && r) return TextAlign.center;
+    if (r) return TextAlign.right;
+    return TextAlign.left;
+  }
+
+  Widget _tableWidget(
+    List<List<String>> rows,
+    List<TextAlign> aligns,
+    TextStyle body,
+    ColorScheme cs,
+  ) {
+    var cols = 0;
+    for (final r in rows) {
+      cols = max(cols, r.length);
+    }
+    final small = body.copyWith(fontSize: (body.fontSize ?? 16) - 1);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Table(
+          defaultColumnWidth: const IntrinsicColumnWidth(),
+          border: TableBorder.all(color: cs.outlineVariant),
+          children: [
+            for (var r = 0; r < rows.length; r++)
+              TableRow(
+                decoration: r == 0
+                    ? BoxDecoration(color: cs.surfaceContainerHighest)
+                    : null,
+                children: [
+                  for (var c = 0; c < cols; c++)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 280),
+                        child: Text.rich(
+                          TextSpan(
+                            children: _spans(
+                              c < rows[r].length
+                                  ? rows[r][c].replaceAll(
+                                      RegExp(r'<br\s*/?>', caseSensitive: false),
+                                      '\n',
+                                    )
+                                  : '',
+                              small,
+                              cs,
+                            ),
+                            style: r == 0
+                                ? small.copyWith(fontWeight: FontWeight.bold)
+                                : small,
+                          ),
+                          textAlign: c < aligns.length ? aligns[c] : TextAlign.left,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ───────── 程式碼區塊 ─────────
+
+  Widget _codeBlock(String code, String lang, TextStyle body) {
+    const bg = Color(0xFF1E1E1E);
+    const fg = Color(0xFFD4D4D4);
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.symmetric(vertical: 6),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 2, 4, 0),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    lang,
+                    style: const TextStyle(
+                      color: Color(0xFF9E9E9E),
+                      fontSize: 12,
+                      fontFamily: 'monospace',
+                    ),
+                  ),
+                ),
+                IconButton(
+                  tooltip: tr('複製'),
+                  visualDensity: VisualDensity.compact,
+                  icon: const Icon(Icons.copy, size: 18, color: Color(0xFF9E9E9E)),
+                  onPressed: () async {
+                    await Clipboard.setData(ClipboardData(text: code));
+                    if (!mounted) return;
+                    ScaffoldMessenger.of(context)
+                      ..hideCurrentSnackBar()
+                      ..showSnackBar(
+                        SnackBar(
+                          duration: const Duration(seconds: 2),
+                          content: Text(tr('已複製程式碼')),
+                        ),
+                      );
+                  },
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Text(
+                code,
+                style: body.copyWith(
+                  fontFamily: 'monospace',
+                  fontSize: 13.5,
+                  height: 1.4,
+                  color: fg,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   List<InlineSpan> _spans(String s, TextStyle base, ColorScheme cs) {
@@ -106,32 +288,59 @@ class _MarkdownViewState extends State<MarkdownView> {
       final line = lines[i];
       final t = line.trimRight();
 
-      // 程式碼區塊
+      // 程式碼區塊（保留縮排與空行；結尾沒關閉就一路到最後）
       if (t.trimLeft().startsWith('```')) {
+        final indent = line.length - line.trimLeft().length;
+        final lang = t.trim().substring(3).trim();
         final buf = <String>[];
         i++;
         while (i < lines.length && !lines[i].trimLeft().startsWith('```')) {
-          buf.add(lines[i]);
+          final l = lines[i];
+          var cut = 0;
+          while (cut < indent && cut < l.length && l[cut] == ' ') {
+            cut++;
+          }
+          buf.add(l.substring(cut).trimRight());
           i++;
         }
         i++; // 結尾的 ```
-        children.add(Container(
-          width: double.infinity,
-          margin: const EdgeInsets.symmetric(vertical: 6),
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: cs.surfaceContainerHighest,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Text(
-              buf.join('\n'),
-              style: body.copyWith(fontFamily: 'monospace', fontSize: 14),
-            ),
-          ),
-        ));
+        children.add(_codeBlock(buf.join('\n'), lang, body));
         continue;
+      }
+
+      // Markdown 表格：標題列 + 分隔列（|---|---|）+ 資料列
+      if (t.contains('|') && i + 1 < lines.length && _isSeparator(lines[i + 1])) {
+        final header = _splitRow(t);
+        final sep = _splitRow(lines[i + 1]);
+        final rows = <List<String>>[header];
+        var j = i + 2;
+        while (j < lines.length &&
+            lines[j].trim().isNotEmpty &&
+            lines[j].contains('|')) {
+          rows.add(_splitRow(lines[j]));
+          j++;
+        }
+        children.add(_tableWidget(rows, sep.map(_alignOf).toList(), body, cs));
+        i = j;
+        continue;
+      }
+
+      // 以 Tab 分隔的表格（從網頁複製表格通常是這種格式）
+      if (t.contains('\t')) {
+        final tabs = '\t'.allMatches(t).length;
+        var j = i;
+        final rows = <List<String>>[];
+        while (j < lines.length &&
+            lines[j].contains('\t') &&
+            '\t'.allMatches(lines[j]).length == tabs) {
+          rows.add(lines[j].split('\t').map((e) => e.trim()).toList());
+          j++;
+        }
+        if (rows.length >= 2) {
+          children.add(_tableWidget(rows, const <TextAlign>[], body, cs));
+          i = j;
+          continue;
+        }
       }
 
       final h = RegExp(r'^(#{1,6})\s+(.*)$').firstMatch(t);
