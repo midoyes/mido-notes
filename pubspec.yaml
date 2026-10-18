@@ -1,0 +1,33 @@
+name: mido_notes
+description: Mido筆記 - 加密筆記與帳號密碼本
+publish_to: "none"
+version: 1.8.0+13
+
+environment:
+  sdk: ">=3.4.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  cryptography: ^2.7.0
+  cryptography_flutter: ^2.3.2
+  flutter_secure_storage: ^9.2.2
+  local_auth: ^2.3.0
+  path_provider: ^2.1.4
+  image_picker: ^1.1.2
+  uuid: ^4.5.1
+  share_plus: ^10.1.4
+  file_picker: ^8.1.6
+  http: ^1.2.2
+  package_info_plus: ^8.1.0
+  url_launcher: ^6.3.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
