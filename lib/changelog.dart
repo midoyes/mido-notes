@@ -9,6 +9,11 @@ class ChangelogEntry {
 
 const List<ChangelogEntry> kChangelog = <ChangelogEntry>[
   ChangelogEntry(
+    '1.9.0',
+    ['新增「另存新檔」：自訂檔名與副檔名，並選擇存放位置（手機、電腦皆可）。'],
+    ['New "Save as file": choose a name, any extension and the folder to save to (phone and PC).'],
+  ),
+  ChangelogEntry(
     '1.8.4',
     ['從網頁／AI 對話貼上時，「Bash」等語言名稱加指令會自動顯示成程式碼框，可一鍵複製。'],
     ['Pasted code that arrives as a language label plus commands (e.g. "Bash") is now shown as a code block with a copy button.'],

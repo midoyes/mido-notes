@@ -1,5 +1,13 @@
 # 更新紀錄
 
+## 1.9.0
+- 新增「另存新檔」：在筆記右上角選單可把目前筆記存成檔案，自訂檔名與副檔名（.md、.txt、.html、.json…也可自己輸入），並用系統視窗選擇存放位置，手機與電腦都適用。
+- 含帳號密碼的筆記存出時會提醒檔案是未加密明文。
+
+English:
+- New "Save as file": from the note menu, save the current note as a file with any name and extension (.md, .txt, .html, .json … or type your own) and choose where to store it, on both phone and PC.
+- Notes containing logins show a warning that the saved file is unencrypted plain text.
+
 ## 1.8.4
 - 從網頁／AI 對話複製貼上時，若程式碼只剩「Bash」等語言名稱加指令（沒有 ``` 標記），預覽會自動還原成程式碼框，並可一鍵複製。
 

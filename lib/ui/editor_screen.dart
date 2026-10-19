@@ -11,6 +11,7 @@ import '../data/models.dart';
 import '../data/password_tools.dart';
 import 'common.dart';
 import 'encrypted_image.dart';
+import 'export_note.dart';
 import 'markdown_view.dart';
 import '../i18n.dart';
 
@@ -259,6 +260,39 @@ class _EditorScreenState extends State<EditorScreen> with WidgetsBindingObserver
     if (c == null) return;
     setState(() => _note.color = c);
     _touched();
+  }
+
+  /// 另存新檔：用目前畫面上的內容（含還沒自動儲存的部分）。
+  Future<void> _export() async {
+    final b = StringBuffer();
+    if (_isLogin) {
+      b.writeln('# ${_title.text}');
+      if (_site.text.trim().isNotEmpty) b.writeln('${tr('網站')}: ${_site.text}');
+      var i = 1;
+      for (final c in _creds) {
+        if (!c.hasContent) continue;
+        b.writeln('');
+        b.writeln('[${tr('帳號')} $i]');
+        b.writeln('${tr('帳號')}: ${c.user.text}');
+        b.writeln('${tr('密碼')}: ${c.pass.text}');
+        i++;
+      }
+      for (final f in _fields) {
+        if (f.hasContent) b.writeln('${f.label.text}: ${f.value.text}');
+      }
+      if (_body.text.trim().isNotEmpty) {
+        b.writeln('');
+        b.writeln(_body.text);
+      }
+    } else {
+      b.write(_body.text);
+    }
+    await exportNoteToFile(
+      context,
+      title: _title.text.trim().isEmpty ? tr('筆記') : _title.text.trim(),
+      content: b.toString(),
+      hasSecrets: _isLogin,
+    );
   }
 
   void _save() {
@@ -1156,6 +1190,8 @@ class _EditorScreenState extends State<EditorScreen> with WidgetsBindingObserver
                   _chooseColor();
                 } else if (v == 'lock') {
                   _toggleLock();
+                } else if (v == 'export') {
+                  _export();
                 } else if (v == 'delete') {
                   _delete();
                 }
@@ -1167,6 +1203,7 @@ class _EditorScreenState extends State<EditorScreen> with WidgetsBindingObserver
                   value: 'lock',
                   child: Text(_note.locked ? tr('解除鎖定') : tr('鎖定（需輸入鎖定密碼）')),
                 ),
+                PopupMenuItem(value: 'export', child: Text(tr('另存新檔…'))),
                 PopupMenuItem(value: 'delete', child: Text(tr('移到回收桶'))),
               ],
             ),
