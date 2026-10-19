@@ -9,6 +9,11 @@ class ChangelogEntry {
 
 const List<ChangelogEntry> kChangelog = <ChangelogEntry>[
   ChangelogEntry(
+    '1.8.4',
+    ['從網頁／AI 對話貼上時，「Bash」等語言名稱加指令會自動顯示成程式碼框，可一鍵複製。'],
+    ['Pasted code that arrives as a language label plus commands (e.g. "Bash") is now shown as a code block with a copy button.'],
+  ),
+  ChangelogEntry(
     '1.8.3',
     ['修正 1.8.1／1.8.2 解鎖後無法開啟任何筆記與設定的問題。'],
     ['Fixed notes and Settings not opening after unlock in 1.8.1 / 1.8.2.'],

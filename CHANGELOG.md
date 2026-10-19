@@ -1,5 +1,11 @@
 # 更新紀錄
 
+## 1.8.4
+- 從網頁／AI 對話複製貼上時，若程式碼只剩「Bash」等語言名稱加指令（沒有 ``` 標記），預覽會自動還原成程式碼框，並可一鍵複製。
+
+English:
+- When pasting from web pages / AI chats, code that arrives as a language label (e.g. "Bash") followed by commands, without ``` fences, is now auto-rendered as a code block with a copy button.
+
 ## 1.8.3
 - 修正 1.8.1／1.8.2 解鎖後無法開啟任何筆記與設定的問題（Windows、Android 都會發生）。
 

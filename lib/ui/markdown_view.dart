@@ -274,6 +274,28 @@ class _MarkdownViewState extends State<MarkdownView> {
   Widget _rich(String s, TextStyle base, ColorScheme cs) =>
       Text.rich(TextSpan(children: _spans(s, base, cs), style: base));
 
+  static const Set<String> _langLabels = <String>{
+    'bash', 'sh', 'shell', 'zsh', 'powershell', 'cmd', 'bat', 'python', 'py',
+    'json', 'yaml', 'yml', 'xml', 'html', 'css', 'sql', 'javascript', 'js',
+    'typescript', 'ts', 'c', 'cpp', 'c++', 'java', 'go', 'rust', 'dockerfile',
+    'ini', 'toml', 'text', 'plaintext', 'perl', 'ruby', 'php', 'diff',
+  };
+
+  static final RegExp _cjk = RegExp(r'[\u3400-\u9fff\u3000-\u303f\uff00-\uffef]');
+  static final RegExp _sym = RegExp(r'''[-/=|;$(){}<>"'\\.\[\]]''');
+  static final RegExp _word = RegExp(r'^[A-Za-z0-9_]+$');
+
+  /// 這一行像不像程式碼／指令（有縮排、註解，或沒有中文且含指令符號）。
+  static bool _looksCode(String l) {
+    final t = l.trimRight();
+    if (t.trim().isEmpty) return false;
+    if (t.startsWith(' ') || t.startsWith('\t')) return true;
+    final s = t.trim();
+    if (s.startsWith('#') || s.startsWith(r'$ ')) return true;
+    if (_cjk.hasMatch(s)) return false;
+    return _sym.hasMatch(s) || _word.hasMatch(s);
+  }
+
   @override
   Widget build(BuildContext context) {
     _disposeRecs();
@@ -306,6 +328,42 @@ class _MarkdownViewState extends State<MarkdownView> {
         i++; // 結尾的 ```
         children.add(_codeBlock(buf.join('\n'), lang, body));
         continue;
+      }
+
+      // 從網頁／AI 對話複製貼上時，程式碼框會變成「語言名稱單獨一行 + 指令」，
+      // 沒有 ``` 標記。這裡自動辨識，還原成程式碼區塊。
+      if (_langLabels.contains(t.trim().toLowerCase())) {
+        var j = i + 1;
+        while (j < lines.length && lines[j].trim().isEmpty) {
+          j++;
+        }
+        if (j < lines.length && _looksCode(lines[j])) {
+          final buf = <String>[];
+          var k = j;
+          while (k < lines.length) {
+            if (lines[k].trim().isEmpty) {
+              var n = k;
+              while (n < lines.length && lines[n].trim().isEmpty) {
+                n++;
+              }
+              if (n < lines.length && _looksCode(lines[n])) {
+                buf.add('');
+                k = n;
+                continue;
+              }
+              break;
+            }
+            if (!_looksCode(lines[k])) break;
+            buf.add(lines[k].trimRight());
+            k++;
+          }
+          while (buf.isNotEmpty && buf.last.isEmpty) {
+            buf.removeLast();
+          }
+          children.add(_codeBlock(buf.join('\n'), t.trim(), body));
+          i = k;
+          continue;
+        }
       }
 
       // Markdown 表格：標題列 + 分隔列（|---|---|）+ 資料列
