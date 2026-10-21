@@ -9,6 +9,29 @@ class ChangelogEntry {
 
 const List<ChangelogEntry> kChangelog = <ChangelogEntry>[
   ChangelogEntry(
+    '2.0.2',
+    ['格式列在編輯模式固定顯示，並記住選取範圍，按按鈕一定套用到選取的文字。'],
+    ['The formatting bar now stays visible in edit mode and remembers the selection.'],
+  ),
+  ChangelogEntry(
+    '2.0.1',
+    ['修正格式列按鈕按下去後消失、沒有套用格式、無法選顏色的問題。'],
+    ['Fixed the formatting bar closing without applying anything, including the color picker.'],
+  ),
+  ChangelogEntry(
+    '2.0.0',
+    [
+      '編輯時鍵盤上方新增格式列：標題、粗體、斜體、底線、文字顏色、清單、待辦、引用、程式碼等。',
+      '待辦清單改為小圓框，檢視模式下可直接點選完成；清單按 Enter 自動接下一項。',
+      '格式仍以 Markdown 儲存，舊筆記與備份完全相容。',
+    ],
+    [
+      'New formatting bar above the keyboard: heading, bold, italic, underline, text color, lists, checklist, quote, code and more.',
+      'Round checkboxes you can tap in view mode; Enter continues a list.',
+      'Formatting is still stored as Markdown, so old notes and backups stay compatible.',
+    ],
+  ),
+  ChangelogEntry(
     '1.9.0',
     ['新增「另存新檔」：自訂檔名與副檔名，並選擇存放位置（手機、電腦皆可）。'],
     ['New "Save as file": choose a name, any extension and the folder to save to (phone and PC).'],

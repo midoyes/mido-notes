@@ -11,9 +11,12 @@ import '../i18n.dart';
 /// 程式碼區塊保留原本的縮排與換行，可一鍵複製；以 Tab 分隔的多行文字（從網頁複製表格
 /// 常見的格式）也會顯示成表格。
 class MarkdownView extends StatefulWidget {
-  const MarkdownView({super.key, required this.text});
+  const MarkdownView({super.key, required this.text, this.onToggleTodo});
 
   final String text;
+
+  /// 點勾選清單的圓形框時呼叫，參數是該行在全文中的行號（從 0 開始）。
+  final void Function(int line)? onToggleTodo;
 
   @override
   State<MarkdownView> createState() => _MarkdownViewState();
@@ -23,7 +26,7 @@ class _MarkdownViewState extends State<MarkdownView> {
   final List<TapGestureRecognizer> _recs = <TapGestureRecognizer>[];
 
   static final RegExp _inline = RegExp(
-    r'(\*\*(.+?)\*\*)|(~~(.+?)~~)|(`([^`]+)`)|(\[([^\]]+)\]\(([^)\s]+)\))|(\*([^*\s][^*]*?)\*)',
+    r'(\*\*(.+?)\*\*)|(~~(.+?)~~)|(`([^`]+)`)|(\[([^\]]+)\]\(([^)\s]+)\))|(\*([^*\s][^*]*?)\*)|(<u>(.+?)</u>)|(<span style="color:#([0-9A-Fa-f]{6})">(.+?)</span>)',
   );
 
   void _disposeRecs() {
@@ -264,6 +267,17 @@ class _MarkdownViewState extends State<MarkdownView> {
           text: m.group(11),
           style: const TextStyle(fontStyle: FontStyle.italic),
         ));
+      } else if (m.group(12) != null) {
+        out.add(TextSpan(
+          children: _spans(m.group(13)!, base, cs),
+          style: const TextStyle(decoration: TextDecoration.underline),
+        ));
+      } else if (m.group(14) != null) {
+        final v = int.parse(m.group(15)!, radix: 16);
+        out.add(TextSpan(
+          children: _spans(m.group(16)!, base, cs),
+          style: TextStyle(color: Color(0xFF000000 | v)),
+        ));
       }
       pos = m.end;
     }
@@ -448,6 +462,7 @@ class _MarkdownViewState extends State<MarkdownView> {
       final todo = RegExp(r'^(\s*)[-*+]\s+\[([ xX])\]\s+(.*)$').firstMatch(t);
       if (todo != null) {
         final done = todo.group(2) != ' ';
+        final lineNo = i;
         children.add(Padding(
           padding: EdgeInsets.only(
             left: 4.0 + todo.group(1)!.length * 8,
@@ -457,10 +472,19 @@ class _MarkdownViewState extends State<MarkdownView> {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(
-                done ? Icons.check_box : Icons.check_box_outline_blank,
-                size: 20,
-                color: done ? cs.primary : cs.outline,
+              InkResponse(
+                radius: 20,
+                onTap: widget.onToggleTodo == null
+                    ? null
+                    : () => widget.onToggleTodo!(lineNo),
+                child: Padding(
+                  padding: const EdgeInsets.all(2),
+                  child: Icon(
+                    done ? Icons.check_circle : Icons.radio_button_unchecked,
+                    size: 24,
+                    color: done ? cs.primary : cs.outline,
+                  ),
+                ),
               ),
               const SizedBox(width: 8),
               Expanded(

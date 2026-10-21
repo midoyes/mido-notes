@@ -14,6 +14,9 @@ Encrypted notes and password manager for Android and Windows, built with Flutter
   文字筆記與帳號密碼（網站／帳號／密碼／備註），一筆登入資料可放多組帳號
 - Folders, tags, pin, color, drag-to-reorder, search, image attachments (encrypted)
   資料夾、標籤、釘選、顏色、拖曳排序、搜尋、圖片附件（加密儲存）
+- **Formatting bar** above the keyboard (bold, italic, underline, strikethrough, heading, text color, bullets, numbered list, checklist, quote, code, link) and **round-checkbox checklists** you can tick in view mode
+  **鍵盤上方格式列**（粗體、斜體、底線、刪除線、標題、文字顏色、項目符號、數字清單、待辦清單、引用、程式碼、連結），**圓形勾選清單**可在檢視模式直接勾選
+- **Save as file** with any name / extension 筆記可**另存新檔**（自訂檔名與副檔名）
 - **Markdown preview** — headings, bold / italic, lists, to-do, quotes, links, **tables**, and **code blocks with a copy button**; pasted AI / web content (e.g. a "Bash" label followed by commands) is recognized as a code block automatically
   **Markdown 預覽**：標題、粗斜體、清單、待辦、引用、連結、**表格**、**程式碼區塊（附複製按鈕）**；從 AI／網頁貼上的內容（例如「Bash」標籤加指令）會自動辨識成程式碼區塊
 - Per-note lock with its own lock password; optional "no master password" mode
@@ -37,6 +40,8 @@ Encrypted notes and password manager for Android and Windows, built with Flutter
 
 | Version | Highlights / 重點 |
 |---|---|
+| 2.0.0 | Formatting bar (bold, italic, underline, heading, color, lists), round-checkbox checklists you can tick in view mode / 格式列（粗體、斜體、底線、標題、顏色、清單）、圓形勾選清單可在檢視模式直接勾選 |
+| 1.9.0 | Save a note as a file with any extension / 筆記另存新檔（自訂副檔名） |
 | 1.8.4 | Auto-detect pasted code blocks (language label + commands) / 貼上的程式碼（語言標籤＋指令）自動辨識成程式碼框 |
 | 1.8.3 | Fixed notes and Settings not opening after unlock / 修正解鎖後無法開啟筆記與設定 |
 | 1.8.2 | Markdown tables and code blocks with copy button; first-run fixes / 表格與程式碼區塊（可複製）、首次開啟修正 |

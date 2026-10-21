@@ -12,6 +12,7 @@ import '../data/password_tools.dart';
 import 'common.dart';
 import 'encrypted_image.dart';
 import 'export_note.dart';
+import 'format_bar.dart';
 import 'markdown_view.dart';
 import '../i18n.dart';
 
@@ -152,6 +153,8 @@ class _EditorScreenState extends State<EditorScreen> with WidgetsBindingObserver
 
   final ScrollController _scroll = ScrollController();
   final GlobalKey _bodyKey = GlobalKey();
+  final FocusNode _bodyFocus = FocusNode();
+  String _lastBody = '';
 
   // 筆記內搜尋
   bool _finding = false;
@@ -180,6 +183,10 @@ class _EditorScreenState extends State<EditorScreen> with WidgetsBindingObserver
     }
     _title.text = _note.title;
     _body.text = _note.body;
+    _lastBody = _body.text;
+    _bodyFocus.addListener(() {
+      if (mounted) setState(() {});
+    });
     _site.text = _note.site;
     _tags.addAll(_note.tags);
     for (final c in _note.credentials) {
@@ -207,6 +214,7 @@ class _EditorScreenState extends State<EditorScreen> with WidgetsBindingObserver
     _debounce?.cancel();
     _title.dispose();
     _body.dispose();
+    _bodyFocus.dispose();
     _site.dispose();
     _findCtl.dispose();
     _scroll.dispose();
@@ -234,6 +242,9 @@ class _EditorScreenState extends State<EditorScreen> with WidgetsBindingObserver
   }
 
   void _onBodyChanged() {
+    // 清單行按 Enter 自動接下一項
+    if (!_isLogin) MdFormat.continueList(_body, _lastBody);
+    _lastBody = _body.text;
     if (_finding) {
       _runFind(keepIndex: true, scroll: false);
     } else if (_body.matches.isNotEmpty) {
@@ -1297,12 +1308,30 @@ class _EditorScreenState extends State<EditorScreen> with WidgetsBindingObserver
                     ] else if (_preview)
                       ConstrainedBox(
                         constraints: const BoxConstraints(minHeight: 200),
-                        child: MarkdownView(text: _body.text),
+                        child: MarkdownView(
+                          text: _body.text,
+                          onToggleTodo: (line) {
+                            final nt = MdFormat.toggleTodoLine(_body.text, line);
+                            if (nt == null) return;
+                            setState(() {
+                              _body.text = nt;
+                              _lastBody = nt;
+                            });
+                            _touched();
+                          },
+                        ),
                       )
                     else
                       TextField(
                         key: _bodyKey,
                         controller: _body,
+                        focusNode: _bodyFocus,
+                        // 點到輸入框外面（例如格式列）不要自動收起鍵盤／失去焦點
+                        onTapOutside: (_) {},
+                        contextMenuBuilder: (ctx, state) =>
+                            AdaptiveTextSelectionToolbar.editableText(
+                          editableTextState: state,
+                        ),
                         minLines: 10,
                         maxLines: null,
                         enableIMEPersonalizedLearning: false,
@@ -1332,6 +1361,12 @@ class _EditorScreenState extends State<EditorScreen> with WidgetsBindingObserver
                 ),
               ),
             ),
+            if (!_isLogin && !_preview)
+              FormatBar(
+                controller: _body,
+                focus: _bodyFocus,
+                onChanged: _onBodyChanged,
+              ),
           ],
         ),
       ),

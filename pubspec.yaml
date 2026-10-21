@@ -1,7 +1,7 @@
 name: mido_notes
 description: Mido筆記 - 加密筆記與帳號密碼本
 publish_to: "none"
-version: 1.9.0+18
+version: 2.0.2+21
 
 environment:
   sdk: ">=3.4.0 <4.0.0"
