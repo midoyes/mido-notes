@@ -682,6 +682,21 @@ class VaultStore extends ChangeNotifier {
     return id;
   }
 
+  /// 影片／錄音附件的代號長這樣：vid-mp4-<uuid>、aud-m4a-<uuid>。
+  /// 副檔名放在代號裡，開啟時才知道要用什麼檔名交給系統播放器。
+  static bool isMediaId(String id) => id.startsWith('vid-') || id.startsWith('aud-');
+
+  /// 加密儲存影片／錄音（不放進記憶體快取，檔案可能很大）。
+  Future<String> addMedia(Uint8List bytes, {required bool video, required String ext}) async {
+    final dek = _dek;
+    if (dek == null) throw StateError('vault locked');
+    final e = ext.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+    final id = '${video ? 'vid' : 'aud'}-${e.isEmpty ? (video ? 'mp4' : 'm4a') : e}-${_uuid.v4()}';
+    final enc = await VaultCrypto.encrypt(bytes, dek);
+    await _atomicWrite(_imageFile(id), enc);
+    return id;
+  }
+
   Future<Uint8List?> loadImage(String id) async {
     final cached = _imageCache[id];
     if (cached != null) return cached;
@@ -691,7 +706,7 @@ class VaultStore extends ChangeNotifier {
       final f = _imageFile(id);
       if (!await f.exists()) return null;
       final bytes = await VaultCrypto.decrypt(await f.readAsBytes(), dek);
-      _cachePut(id, bytes);
+      if (!isMediaId(id)) _cachePut(id, bytes);
       return bytes;
     } catch (_) {
       return null;

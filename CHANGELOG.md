@@ -1,36 +1,28 @@
 # 更新紀錄
 
-## 2.0.2
-- 再次修正格式列：格式列在編輯模式下固定顯示，不會因為輸入框失去焦點而消失；並記住選取範圍，按按鈕時一定套用到你選的文字。
+## 2.1.3
+新功能：
+- **格式列**：編輯時鍵盤上方出現一排按鈕（像 iPhone 備忘錄）：標題、粗體、斜體、底線、刪除線、文字顏色、項目符號、數字清單、待辦清單、引用、程式碼、連結、分隔線。
+- **待辦清單**：前面是小圓框，在檢視模式下點一下就能勾選完成；按 Enter 自動接下一項。
+- **附件**：筆記下方的「圖片」區升級為「附件」，除了相片，還可加入：
+  - **手寫繪圖**：多種筆粗細、9 種顏色、螢光筆、橡皮擦、復原／重做。
+  - **影片**：從相簿或檔案選擇，手機也可直接錄影。
+  - **即時錄音**（最長 10 分鐘）與**錄音檔**。
+  - 附件與筆記一起加密，單一影片或錄音上限 30 MB；點選後以系統播放器播放。
+- **另存新檔**：把筆記存成文字檔（可自訂副檔名，如 .md、.txt、.html），或**整則筆記連同附件打包成 .zip**；每個附件也能單獨另存成原本格式。
+- Markdown 預覽：貼上 AI／網頁內容時，「Bash」等語言標籤加指令會自動顯示成程式碼框。
 
 English:
-- Formatting bar fix: it now stays visible in edit mode (no longer tied to text-field focus) and remembers the selection so buttons always apply to the selected text.
-
-## 2.0.1
-- 修正格式列按鈕按下去後鍵盤與格式列消失、沒有套用格式、也無法選顏色的問題。
-
-English:
-- Fixed the formatting bar closing (and doing nothing) when a button was tapped, including the color picker.
-
-## 2.0.0
-- 編輯時鍵盤上方新增格式列（像 iPhone 備忘錄）：標題、粗體、斜體、底線、刪除線、文字顏色、項目符號、數字清單、待辦清單、引用、程式碼、連結、分隔線。選取文字再按按鈕即可套用，再按一次取消。
-- 待辦清單前面是小圓框；在清單按 Enter 會自動接下一項，空項目再按 Enter 結束清單。
-- 在檢視（預覽）模式下，可直接點圓框勾選完成項目，內容會自動儲存。
-- 格式仍以 Markdown 文字儲存，舊筆記、備份、另存新檔完全相容。
-
-English:
-- New formatting bar above the keyboard (like iPhone Notes): heading, bold, italic, underline, strikethrough, text color, bullets, numbered list, checklist, quote, code, link, divider. Select text and tap to apply; tap again to remove.
-- Checklists use round checkboxes; Enter continues the list, Enter on an empty item ends it.
-- In view (preview) mode you can tap the circle to check items off; changes are saved automatically.
-- Formatting is still stored as Markdown text, so old notes, backups and "Save as file" stay compatible.
-
-## 1.9.0
-- 新增「另存新檔」：在筆記右上角選單可把目前筆記存成檔案，自訂檔名與副檔名（.md、.txt、.html、.json…也可自己輸入），並用系統視窗選擇存放位置，手機與電腦都適用。
-- 含帳號密碼的筆記存出時會提醒檔案是未加密明文。
-
-English:
-- New "Save as file": from the note menu, save the current note as a file with any name and extension (.md, .txt, .html, .json … or type your own) and choose where to store it, on both phone and PC.
-- Notes containing logins show a warning that the saved file is unencrypted plain text.
+New features:
+- **Formatting bar**: a row of buttons above the keyboard while editing (like iPhone Notes): heading, bold, italic, underline, strikethrough, text color, bullets, numbered list, checklist, quote, code, link, divider.
+- **Checklists**: round checkboxes you can tick in view mode; Enter continues the list.
+- **Attachments**: the "Images" area is now "Attachments". Besides photos you can add:
+  - **Handwriting / drawing**: several pen widths, 9 colors, highlighter, eraser, undo / redo.
+  - **Video**: from gallery or files, or record on your phone.
+  - **Audio recording** (up to 10 minutes) and **audio files**.
+  - Attachments are encrypted with the note; video / audio are limited to 30 MB each and play with the system player.
+- **Save as file**: save a note as a text file (any extension, e.g. .md, .txt, .html) or **pack the whole note with its attachments into a .zip**; each attachment can also be saved on its own in its original format.
+- Markdown preview: pasted AI / web content where code arrives as a language label (e.g. "Bash") plus commands is shown as a code block.
 
 ## 1.8.4
 - 從網頁／AI 對話複製貼上時，若程式碼只剩「Bash」等語言名稱加指令（沒有 ``` 標記），預覽會自動還原成程式碼框，並可一鍵複製。

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../app_state.dart';
 import 'common.dart';
+import 'export_note.dart';
 import '../i18n.dart';
 
 /// 顯示加密儲存的圖片（讀檔後在記憶體中解密）。
@@ -83,6 +84,11 @@ class ImageViewerScreen extends StatelessWidget {
         backgroundColor: Colors.black,
         foregroundColor: Colors.white,
         actions: [
+          IconButton(
+            tooltip: tr('另存圖片'),
+            icon: const Icon(Icons.save_alt),
+            onPressed: () => saveAttachmentAs(context, id),
+          ),
           IconButton(
             tooltip: tr('移除圖片'),
             icon: const Icon(Icons.delete_outline),

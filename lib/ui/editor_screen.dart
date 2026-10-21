@@ -1,9 +1,11 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../app_state.dart';
@@ -11,9 +13,12 @@ import '../data/models.dart';
 import '../data/password_tools.dart';
 import 'common.dart';
 import 'encrypted_image.dart';
+import 'draw_screen.dart';
 import 'export_note.dart';
 import 'format_bar.dart';
 import 'markdown_view.dart';
+import 'media_utils.dart';
+import 'record_dialog.dart';
 import '../i18n.dart';
 
 /// 可以把「搜尋到的關鍵字」標上底色的輸入控制器。
@@ -303,6 +308,7 @@ class _EditorScreenState extends State<EditorScreen> with WidgetsBindingObserver
       title: _title.text.trim().isEmpty ? tr('筆記') : _title.text.trim(),
       content: b.toString(),
       hasSecrets: _isLogin,
+      attachmentIds: List<String>.of(_note.imageIds),
     );
   }
 
@@ -883,7 +889,7 @@ class _EditorScreenState extends State<EditorScreen> with WidgetsBindingObserver
           children: [
             ListTile(
               leading: const Icon(Icons.photo_library_outlined),
-              title: Text(tr('從相簿選擇')),
+              title: Text(tr('相片（從相簿選擇）')),
               onTap: () {
                 Navigator.pop(ctx);
                 _addImages(ImageSource.gallery);
@@ -892,13 +898,239 @@ class _EditorScreenState extends State<EditorScreen> with WidgetsBindingObserver
             if (!Platform.isWindows && !Platform.isLinux && !Platform.isMacOS)
             ListTile(
               leading: const Icon(Icons.photo_camera_outlined),
-              title: Text(tr('拍照')),
+              title: Text(tr('拍照（即時拍攝）')),
               onTap: () {
                 Navigator.pop(ctx);
                 _addImages(ImageSource.camera);
               },
             ),
+            ListTile(
+              leading: const Icon(Icons.draw_outlined),
+              title: Text(tr('手寫繪圖')),
+              onTap: () {
+                Navigator.pop(ctx);
+                _addDrawing();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.video_library_outlined),
+              title: Text(tr('影片（從相簿／檔案選擇）')),
+              onTap: () {
+                Navigator.pop(ctx);
+                _addVideo(camera: false);
+              },
+            ),
+            if (_isMobile)
+              ListTile(
+                leading: const Icon(Icons.videocam_outlined),
+                title: Text(tr('錄影（即時拍攝）')),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _addVideo(camera: true);
+                },
+              ),
+            ListTile(
+              leading: const Icon(Icons.mic_none),
+              title: Text(tr('即時錄音')),
+              onTap: () {
+                Navigator.pop(ctx);
+                _addRecording();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.audio_file_outlined),
+              title: Text(tr('錄音檔（從檔案選擇）')),
+              onTap: () {
+                Navigator.pop(ctx);
+                _addAudioFile();
+              },
+            ),
           ],
+        ),
+      ),
+    );
+  }
+
+  bool get _isMobile => Platform.isAndroid || Platform.isIOS;
+
+  void _toast(String msg) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+  }
+
+  Future<void> _attach(String id) async {
+    if (!mounted) return;
+    setState(() => _note.imageIds.add(id));
+    _touched();
+  }
+
+  /// 手寫／繪圖：結果存成圖片附件。
+  Future<void> _addDrawing() async {
+    final bytes = await Navigator.of(context).push<Uint8List>(
+      MaterialPageRoute<Uint8List>(builder: (_) => const DrawScreen()),
+    );
+    if (bytes == null || !mounted) return;
+    try {
+      await _attach(await vault.addImage(bytes));
+    } catch (e) {
+      _toast(tr('加入圖片失敗：$e'));
+    }
+  }
+
+  /// 把檔案（路徑）讀進來、檢查大小、加密後加入附件，並刪除未加密的暫存檔。
+  Future<void> _storeMediaFile(String path, {required bool video, required bool deleteSource}) async {
+    final f = File(path);
+    try {
+      final len = await f.length();
+      if (len > kMaxMediaBytes) {
+        _toast(tr('檔案太大（${fmtBytes(len)}），單一檔案上限 30 MB。'));
+        return;
+      }
+      final bytes = await f.readAsBytes();
+      final id = await vault.addMedia(
+        bytes,
+        video: video,
+        ext: extOfPath(path, video ? 'mp4' : 'm4a'),
+      );
+      await _attach(id);
+    } catch (e) {
+      _toast(tr('加入失敗：$e'));
+    } finally {
+      if (deleteSource) {
+        try {
+          await f.delete();
+        } catch (_) {}
+      }
+    }
+  }
+
+  Future<void> _addVideo({required bool camera}) async {
+    try {
+      String? path;
+      var temp = false;
+      if (_isMobile) {
+        final x = await vault.withExternal(
+          () => ImagePicker().pickVideo(
+            source: camera ? ImageSource.camera : ImageSource.gallery,
+            maxDuration: const Duration(minutes: 2),
+          ),
+        );
+        path = x?.path;
+        temp = true; // 選取時系統會留下未加密的暫存檔
+      } else {
+        final r = await vault.withExternal(
+          () => FilePicker.platform.pickFiles(type: FileType.video),
+        );
+        path = r?.files.single.path;
+      }
+      if (path == null) return;
+      await _storeMediaFile(path, video: true, deleteSource: temp);
+    } catch (e) {
+      _toast(tr('加入失敗：$e'));
+    }
+  }
+
+  Future<void> _addAudioFile() async {
+    try {
+      final r = await vault.withExternal(
+        () => FilePicker.platform.pickFiles(type: FileType.audio),
+      );
+      final path = r?.files.single.path;
+      if (path == null) return;
+      await _storeMediaFile(path, video: false, deleteSource: false);
+    } catch (e) {
+      _toast(tr('加入失敗：$e'));
+    }
+  }
+
+  Future<void> _addRecording() async {
+    final r = await vault.withExternal(
+      () => showDialog<RecordResult>(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => const RecordDialog(),
+      ),
+    );
+    if (r == null || !mounted) return;
+    try {
+      await _attach(await vault.addMedia(r.bytes, video: false, ext: r.ext));
+    } catch (e) {
+      _toast(tr('加入失敗：$e'));
+    }
+  }
+
+  void _mediaSheet(String id) {
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: Icon(isVideoId(id) ? Icons.play_circle_outline : Icons.play_arrow),
+              title: Text(isVideoId(id) ? tr('播放影片') : tr('播放錄音')),
+              onTap: () {
+                Navigator.pop(ctx);
+                openMedia(context, id);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.save_alt),
+              title: Text(tr('另存附件')),
+              onTap: () {
+                Navigator.pop(ctx);
+                saveAttachmentAs(context, id, baseName: _title.text.trim().isEmpty ? null : _title.text.trim());
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.delete_outline),
+              title: Text(tr('刪除')),
+              onTap: () async {
+                Navigator.pop(ctx);
+                final ok = await confirmDialog(
+                  context,
+                  title: tr('刪除這個附件？'),
+                  message: tr('刪除後無法復原。'),
+                  confirmText: tr('刪除'),
+                );
+                if (ok != true || !mounted) return;
+                setState(() => _note.imageIds.remove(id));
+                _removedImages.add(id);
+                _touched();
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _mediaTile(String id) {
+    final cs = Theme.of(context).colorScheme;
+    final video = isVideoId(id);
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(8),
+        onTap: () => _mediaSheet(id),
+        child: Container(
+          width: 96,
+          height: 96,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            color: cs.secondaryContainer,
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(video ? Icons.videocam : Icons.mic, size: 32, color: cs.onSecondaryContainer),
+              const SizedBox(height: 4),
+              Text(
+                '${video ? tr('影片') : tr('錄音')} .${mediaExt(id)}',
+                style: TextStyle(fontSize: 12, color: cs.onSecondaryContainer),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -923,6 +1155,9 @@ class _EditorScreenState extends State<EditorScreen> with WidgetsBindingObserver
         scrollDirection: Axis.horizontal,
         children: [
           for (final id in _note.imageIds)
+            if (isMediaId(id))
+              _mediaTile(id)
+            else
             Padding(
               padding: const EdgeInsets.only(right: 8),
               child: GestureDetector(
@@ -1344,7 +1579,7 @@ class _EditorScreenState extends State<EditorScreen> with WidgetsBindingObserver
                         ),
                       ),
                     const SizedBox(height: 16),
-                    Text(tr('圖片'), style: Theme.of(context).textTheme.titleSmall),
+                    Text(tr('附件'), style: Theme.of(context).textTheme.titleSmall),
                     const SizedBox(height: 8),
                     _imageStrip(),
                     if (_inStore) ...[

@@ -51,6 +51,12 @@ if "android.permission.INTERNET" not in s:  # 手動檢查更新需要網路
         '<uses-permission android:name="android.permission.INTERNET"/>\n    <application',
         1,
     )
+if "RECORD_AUDIO" not in s:  # 錄音需要麥克風
+    s = s.replace(
+        "<application",
+        '<uses-permission android:name="android.permission.RECORD_AUDIO"/>\n    <application',
+        1,
+    )
 if "USE_BIOMETRIC" not in s:
     s = s.replace(
         "<application",

@@ -9,32 +9,21 @@ class ChangelogEntry {
 
 const List<ChangelogEntry> kChangelog = <ChangelogEntry>[
   ChangelogEntry(
-    '2.0.2',
-    ['格式列在編輯模式固定顯示，並記住選取範圍，按按鈕一定套用到選取的文字。'],
-    ['The formatting bar now stays visible in edit mode and remembers the selection.'],
-  ),
-  ChangelogEntry(
-    '2.0.1',
-    ['修正格式列按鈕按下去後消失、沒有套用格式、無法選顏色的問題。'],
-    ['Fixed the formatting bar closing without applying anything, including the color picker.'],
-  ),
-  ChangelogEntry(
-    '2.0.0',
+    '2.1.3',
     [
-      '編輯時鍵盤上方新增格式列：標題、粗體、斜體、底線、文字顏色、清單、待辦、引用、程式碼等。',
+      '格式列：編輯時鍵盤上方有標題、粗體、斜體、底線、文字顏色、清單、待辦、引用、程式碼等按鈕。',
       '待辦清單改為小圓框，檢視模式下可直接點選完成；清單按 Enter 自動接下一項。',
-      '格式仍以 Markdown 儲存，舊筆記與備份完全相容。',
+      '「圖片」升級為「附件」：新增手寫繪圖（多種筆粗細與顏色、螢光筆、橡皮擦）、影片、即時錄音、錄音檔，與筆記一起加密（影片、錄音單檔上限 30 MB）。',
+      '另存新檔：可存成自訂副檔名的文字檔，或整則筆記連同附件打包成 .zip；附件也能單獨另存成原本格式。',
+      '貼上 AI／網頁內容時，「Bash」等語言標籤加指令會自動顯示成程式碼框。',
     ],
     [
-      'New formatting bar above the keyboard: heading, bold, italic, underline, text color, lists, checklist, quote, code and more.',
-      'Round checkboxes you can tap in view mode; Enter continues a list.',
-      'Formatting is still stored as Markdown, so old notes and backups stay compatible.',
+      'Formatting bar above the keyboard: heading, bold, italic, underline, text color, lists, checklist, quote, code and more.',
+      'Round checkboxes you can tick in view mode; Enter continues a list.',
+      '"Images" is now "Attachments": handwriting / drawing (pen widths, colors, highlighter, eraser), video, audio recording and audio files, encrypted with the note (30 MB per video / audio file).',
+      'Save as file: a text file with any extension, or the whole note with its attachments as a .zip; attachments can also be saved individually in their original format.',
+      'Pasted AI / web code that arrives as a language label (e.g. "Bash") plus commands is shown as a code block.',
     ],
-  ),
-  ChangelogEntry(
-    '1.9.0',
-    ['新增「另存新檔」：自訂檔名與副檔名，並選擇存放位置（手機、電腦皆可）。'],
-    ['New "Save as file": choose a name, any extension and the folder to save to (phone and PC).'],
   ),
   ChangelogEntry(
     '1.8.4',
