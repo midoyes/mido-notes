@@ -9,6 +9,21 @@ class ChangelogEntry {
 
 const List<ChangelogEntry> kChangelog = <ChangelogEntry>[
   ChangelogEntry(
+    '2.3.0',
+    [
+      '新增圖片轉文字：手機可拍照掃描或選圖；已存的附件圖片也能辨識；Windows 可選圖或用 Win+Shift+S 截圖後直接辨識。',
+      '可框選要辨識的範圍，並依文字位置還原原本的排列（標題 : 內容對齊）。',
+      '「在圖上選取文字」：直接在圖片上點選或框選要複製的內容。',
+      '辨識結果先顯示可編輯的視窗，確認後插入筆記；全程離線，圖片不會上傳。',
+    ],
+    [
+      'New image to text: scan with the phone camera or pick a photo; saved image attachments can be recognized; on Windows pick an image or use a Win+Shift+S screenshot.',
+      'Select the area to recognize, and the original layout (aligned "label : value") is restored from word positions.',
+      '"Select text on the image": tap or drag over the picture to choose what to copy.',
+      'The result is shown in an editable window before inserting into the note; fully offline, images are never uploaded.',
+    ],
+  ),
+  ChangelogEntry(
     '2.1.3',
     [
       '格式列：編輯時鍵盤上方有標題、粗體、斜體、底線、文字顏色、清單、待辦、引用、程式碼等按鈕。',

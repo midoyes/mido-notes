@@ -18,6 +18,8 @@ import 'export_note.dart';
 import 'format_bar.dart';
 import 'markdown_view.dart';
 import 'media_utils.dart';
+import 'ocr_dialog.dart';
+import '../ocr.dart';
 import 'record_dialog.dart';
 import '../i18n.dart';
 
@@ -904,6 +906,33 @@ class _EditorScreenState extends State<EditorScreen> with WidgetsBindingObserver
                 _addImages(ImageSource.camera);
               },
             ),
+            if (ocrSupported && _isMobile)
+              ListTile(
+                leading: const Icon(Icons.document_scanner_outlined),
+                title: Text(tr('掃描文字（拍照轉文字）')),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _scanText(camera: true);
+                },
+              ),
+            if (ocrSupported)
+              ListTile(
+                leading: const Icon(Icons.text_snippet_outlined),
+                title: Text(tr('圖片轉文字（選擇圖片）')),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _scanText(camera: false);
+                },
+              ),
+            if (ocrIsWindows)
+              ListTile(
+                leading: const Icon(Icons.screenshot_monitor_outlined),
+                title: Text(tr('剪貼簿截圖轉文字（Win+Shift+S）')),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _scanClipboard();
+                },
+              ),
             ListTile(
               leading: const Icon(Icons.draw_outlined),
               title: Text(tr('手寫繪圖')),
@@ -962,6 +991,75 @@ class _EditorScreenState extends State<EditorScreen> with WidgetsBindingObserver
     if (!mounted) return;
     setState(() => _note.imageIds.add(id));
     _touched();
+  }
+
+  /// 把辨識出來的文字加到筆記內文最後面。
+  void _appendText(String t) {
+    final v = _body.text;
+    final sep = v.isEmpty ? '' : (v.endsWith('\n\n') ? '' : (v.endsWith('\n') ? '\n' : '\n\n'));
+    final nt = '$v$sep$t\n';
+    setState(() {
+      _body.text = nt;
+      _body.selection = TextSelection.collapsed(offset: nt.length);
+      _lastBody = nt;
+    });
+    _touched();
+    _toast(tr('已插入辨識的文字'));
+  }
+
+  /// Windows：把剪貼簿裡的截圖轉成文字（截圖比拍螢幕照片準確很多）。
+  Future<void> _scanClipboard() async {
+    final bytes = await readClipboardImage();
+    if (!mounted) return;
+    if (bytes == null) {
+      _toast(tr('剪貼簿裡沒有圖片。請先按 Win+Shift+S 框選截圖，再回來按這個。'));
+      return;
+    }
+    final out = await showOcrDialog(context, bytes, offerKeepImage: true);
+    if (out == null || !mounted) return;
+    _appendText(out.text);
+    if (out.keepImage) {
+      await _attach(await vault.addImage(bytes));
+    }
+  }
+
+  /// 拍照／選圖 → 轉文字 → 確認後插入筆記。
+  Future<void> _scanText({required bool camera}) async {
+    try {
+      Uint8List? bytes;
+      if (_isMobile) {
+        final x = await vault.withExternal(
+          () => ImagePicker().pickImage(
+            source: camera ? ImageSource.camera : ImageSource.gallery,
+            maxWidth: 3000,
+            maxHeight: 3000,
+            imageQuality: 92,
+          ),
+        );
+        if (x == null) return;
+        bytes = await x.readAsBytes();
+        try {
+          await File(x.path).delete(); // 系統留下的未加密暫存檔
+        } catch (_) {}
+      } else {
+        final r = await vault.withExternal(
+          () => FilePicker.platform.pickFiles(type: FileType.image, withData: true),
+        );
+        bytes = r?.files.single.bytes;
+        if (bytes == null && r?.files.single.path != null) {
+          bytes = await File(r!.files.single.path!).readAsBytes();
+        }
+      }
+      if (bytes == null || !mounted) return;
+      final out = await showOcrDialog(context, bytes, offerKeepImage: true);
+      if (out == null || !mounted) return;
+      _appendText(out.text);
+      if (out.keepImage) {
+        await _attach(await vault.addImage(bytes));
+      }
+    } catch (e) {
+      _toast(tr('辨識失敗：$e'));
+    }
   }
 
   /// 手寫／繪圖：結果存成圖片附件。
@@ -1137,10 +1235,15 @@ class _EditorScreenState extends State<EditorScreen> with WidgetsBindingObserver
   }
 
   Future<void> _viewImage(String id) async {
-    final remove = await Navigator.of(context).push<bool>(
-      MaterialPageRoute<bool>(builder: (_) => ImageViewerScreen(id: id)),
+    final res = await Navigator.of(context).push<Object>(
+      MaterialPageRoute<Object>(builder: (_) => ImageViewerScreen(id: id)),
     );
-    if (remove == true && mounted) {
+    if (res is String && mounted) {
+      _appendText(res); // 從圖片辨識出來的文字
+      return;
+    }
+    final remove = res == true;
+    if (remove && mounted) {
       setState(() => _note.imageIds.remove(id));
       _removedImages.add(id);
       _touched();

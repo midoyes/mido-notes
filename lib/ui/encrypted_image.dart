@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import '../app_state.dart';
 import 'common.dart';
 import 'export_note.dart';
+import 'ocr_dialog.dart';
+import '../ocr.dart';
 import '../i18n.dart';
 
 /// 顯示加密儲存的圖片（讀檔後在記憶體中解密）。
@@ -84,6 +86,17 @@ class ImageViewerScreen extends StatelessWidget {
         backgroundColor: Colors.black,
         foregroundColor: Colors.white,
         actions: [
+          if (ocrSupported)
+            IconButton(
+              tooltip: tr('辨識圖片中的文字'),
+              icon: const Icon(Icons.text_snippet_outlined),
+              onPressed: () async {
+                final bytes = await vault.loadImage(id);
+                if (bytes == null || !context.mounted) return;
+                final out = await showOcrDialog(context, bytes);
+                if (out != null && context.mounted) Navigator.pop(context, out.text);
+              },
+            ),
           IconButton(
             tooltip: tr('另存圖片'),
             icon: const Icon(Icons.save_alt),

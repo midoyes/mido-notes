@@ -9,6 +9,7 @@ import 'app_state.dart';
 import 'ui/home_screen.dart';
 import 'ui/lock_guard.dart';
 import 'ui/media_utils.dart';
+import 'ocr.dart';
 import 'i18n.dart';
 
 /// 把錯誤寫到桌面的 mido_error.log，方便回報問題（只記錄錯誤，不含筆記內容）。
@@ -42,6 +43,7 @@ Future<void> main() async {
   }
   await appSettings.load();
   await vault.init();
+  cleanOcrTemp();
   cleanMediaTemp(); // 清掉上次播放影片／錄音時留下的解密暫存檔
   runApp(const MidoApp());
 }

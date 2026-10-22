@@ -124,3 +124,65 @@ for name, snippet in (("build.gradle.kts", KTS), ("build.gradle", GROOVY)):
         break
 else:
     fail("找不到 android/build.gradle(.kts)")
+
+# 6. 圖片轉文字（Google ML Kit）：加入中文辨識模型（同時能辨識英文與數字），離線執行
+MLKIT_KTS = '''
+// --- Mido筆記：ML Kit 中文文字辨識模型 ---
+dependencies {
+    implementation("com.google.mlkit:text-recognition-chinese:16.0.1")
+}
+'''
+MLKIT_GROOVY = '''
+// --- Mido筆記：ML Kit 中文文字辨識模型 ---
+dependencies {
+    implementation 'com.google.mlkit:text-recognition-chinese:16.0.1'
+}
+'''
+for name, snippet in (("build.gradle.kts", MLKIT_KTS), ("build.gradle", MLKIT_GROOVY)):
+    app_gradle = ANDROID / "app" / name
+    if app_gradle.exists():
+        text = app_gradle.read_text(encoding="utf-8")
+        if "text-recognition-chinese" not in text:
+            app_gradle.write_text(text + snippet, encoding="utf-8")
+        print(f"ML Kit chinese -> {app_gradle.relative_to(ROOT)}")
+        break
+else:
+    fail("找不到 android/app/build.gradle(.kts)")
+
+# 7. R8：ML Kit 外掛會參考日文／韓文／梵文模型的類別，我們只用中文模型，
+#    告訴 R8 這些找不到的類別可以忽略（否則 release 建置會因 Missing class 失敗）。
+rules = ANDROID / "app" / "proguard-rules.pro"
+rules.write_text(
+    "-dontwarn com.google.mlkit.vision.text.devanagari.**\n"
+    "-dontwarn com.google.mlkit.vision.text.japanese.**\n"
+    "-dontwarn com.google.mlkit.vision.text.korean.**\n",
+    encoding="utf-8",
+)
+PRO_KTS = '''
+// --- Mido筆記：R8 忽略未使用的 ML Kit 語言模型 ---
+android {
+    buildTypes {
+        release {
+            proguardFiles("proguard-rules.pro")
+        }
+    }
+}
+'''
+PRO_GROOVY = '''
+// --- Mido筆記：R8 忽略未使用的 ML Kit 語言模型 ---
+android {
+    buildTypes {
+        release {
+            proguardFiles 'proguard-rules.pro'
+        }
+    }
+}
+'''
+for name, snippet in (("build.gradle.kts", PRO_KTS), ("build.gradle", PRO_GROOVY)):
+    app_gradle = ANDROID / "app" / name
+    if app_gradle.exists():
+        text = app_gradle.read_text(encoding="utf-8")
+        if "忽略未使用的 ML Kit" not in text:
+            app_gradle.write_text(text + snippet, encoding="utf-8")
+        print(f"proguard rules -> {app_gradle.relative_to(ROOT)}")
+        break

@@ -1,5 +1,29 @@
 # 更新紀錄
 
+## 2.3.0
+新功能：
+- 新增「圖片轉文字」：
+  - 手機：可直接拍照掃描，或從相簿選圖；已存成附件的圖片，開啟後按右上角按鈕也能辨識。
+  - Windows：選擇圖片檔、對附件圖片辨識，或用 Win+Shift+S 截圖後直接「剪貼簿截圖轉文字」。
+  - 可「框選要辨識的範圍」，只辨識需要的那一塊。
+  - 依文字位置還原原本的排列（標題 : 內容對齊的表格、終端機畫面），對齊的內容插入筆記時自動放進程式碼區塊。
+  - 「在圖上選取文字」：直接在圖片上點單字或拖曳框選，只複製或帶回要的內容。
+  - Windows 提供自動模式（試多種影像處理與語言並挑最好的）、加強影像、反相等選項。
+  - 辨識結果先顯示在可編輯的視窗，確認後再插入筆記；可選擇同時把照片存成附件。
+  - 全程在本機離線完成，圖片不會上傳。
+
+English:
+New features:
+- New "Image to text":
+  - Phone: scan with the camera or pick a photo; for an image already saved as an attachment, open it and tap the button at the top right.
+  - Windows: pick an image file, run it on a saved attachment, or use "Clipboard screenshot to text" after a Win+Shift+S capture.
+  - "Select area to recognize" to crop to just the part you need.
+  - Restores the original layout from word positions (aligned "label : value" tables, terminal screens); aligned text is inserted into a code block.
+  - "Select text on the image": tap words or drag a box on the picture to copy or bring back only what you want.
+  - Windows has an Auto mode (tries several image treatments and languages and keeps the best), plus Enhance and Invert options.
+  - The result is shown in an editable window first; insert it when you are happy, and optionally keep the photo as an attachment.
+  - Everything runs offline on your device; images are never uploaded.
+
 ## 2.1.3
 新功能：
 - **格式列**：編輯時鍵盤上方出現一排按鈕（像 iPhone 備忘錄）：標題、粗體、斜體、底線、刪除線、文字顏色、項目符號、數字清單、待辦清單、引用、程式碼、連結、分隔線。
