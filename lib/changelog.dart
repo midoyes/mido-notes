@@ -9,7 +9,7 @@ class ChangelogEntry {
 
 const List<ChangelogEntry> kChangelog = <ChangelogEntry>[
   ChangelogEntry(
-    '2.3.0',
+    '2.3.1',
     [
       '新增圖片轉文字：手機可拍照掃描或選圖；已存的附件圖片也能辨識；Windows 可選圖或用 Win+Shift+S 截圖後直接辨識。',
       '可框選要辨識的範圍，並依文字位置還原原本的排列（標題 : 內容對齊）。',

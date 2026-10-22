@@ -155,7 +155,12 @@ rules = ANDROID / "app" / "proguard-rules.pro"
 rules.write_text(
     "-dontwarn com.google.mlkit.vision.text.devanagari.**\n"
     "-dontwarn com.google.mlkit.vision.text.japanese.**\n"
-    "-dontwarn com.google.mlkit.vision.text.korean.**\n",
+    "-dontwarn com.google.mlkit.vision.text.korean.**\n"
+    "-keep class com.google.mlkit.** { *; }\n"
+    "-keep class com.google.android.gms.internal.mlkit_** { *; }\n"
+    "-keep class com.google.android.gms.vision.** { *; }\n"
+    "-keep class * implements com.google.firebase.components.ComponentRegistrar\n"
+    "-keep class com.google.mlkit.common.internal.MlKitComponentDiscoveryService\n",
     encoding="utf-8",
 )
 PRO_KTS = '''
@@ -164,6 +169,9 @@ android {
     buildTypes {
         release {
             proguardFiles("proguard-rules.pro")
+            // ML Kit 靠反射／元件登錄運作，R8 縮減與混淆會讓辨識在 release 版崩潰，所以關閉
+            isMinifyEnabled = false
+            isShrinkResources = false
         }
     }
 }
@@ -174,6 +182,8 @@ android {
     buildTypes {
         release {
             proguardFiles 'proguard-rules.pro'
+            minifyEnabled false
+            shrinkResources false
         }
     }
 }
