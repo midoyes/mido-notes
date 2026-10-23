@@ -51,6 +51,8 @@ class _OcrDialogState extends State<_OcrDialog> {
   bool _cropped = false;
   bool _layout = true; // 依位置還原排列（欄位對齊）
   OcrData? _data;
+  bool _ai = false; // Windows：用 AI 辨識（PaddleOCR）
+  bool _aiOk = false; // 安裝包裡有 AI 辨識程式
 
   @override
   void initState() {
@@ -58,7 +60,17 @@ class _OcrDialogState extends State<_OcrDialog> {
     _text.addListener(() {
       if (mounted) setState(() {});
     });
-    _recognize();
+    if (ocrHasAi) {
+      // 有 AI 辨識（Windows、Android）就預設用它，沒有才用系統內建
+      aiOcrAvailable().then((v) {
+        if (!mounted) return;
+        _aiOk = v;
+        _ai = v;
+        _recognize();
+      });
+    } else {
+      _recognize();
+    }
   }
 
   @override
@@ -74,7 +86,19 @@ class _OcrDialogState extends State<_OcrDialog> {
       _error = null;
     });
     try {
-      final d = (ocrIsWindows && _auto)
+      OcrData? aiData;
+      if (ocrHasAi && _ai) {
+        try {
+          aiData = await recognizeData(_img, ai: true);
+        } on OcrException {
+          // AI 辨識失敗（例如被防毒擋掉）：自動退回系統內建辨識
+          _ai = false;
+          _aiOk = false;
+        }
+      }
+      final d = aiData != null
+          ? aiData
+          : (ocrIsWindows && _auto)
           ? await recognizeBestWindows(_img, _lang)
           : await recognizeData(
               _img,
@@ -151,7 +175,40 @@ class _OcrDialogState extends State<_OcrDialog> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (win)
+              if (_aiOk)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Wrap(
+                    spacing: 8,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      Text(tr('辨識引擎')),
+                      ChoiceChip(
+                        label: Text(ocrIsWindows ? tr('標準（系統內建）') : tr('標準（ML Kit）')),
+                        selected: !_ai,
+                        onSelected: _busy
+                            ? null
+                            : (v) {
+                                if (!_ai) return;
+                                _ai = false;
+                                _recognize();
+                              },
+                      ),
+                      ChoiceChip(
+                        label: Text(tr('AI 辨識（PaddleOCR）')),
+                        selected: _ai,
+                        onSelected: _busy
+                            ? null
+                            : (v) {
+                                if (_ai) return;
+                                _ai = true;
+                                _recognize();
+                              },
+                      ),
+                    ],
+                  ),
+                ),
+              if (win && !_ai)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 8),
                   child: Row(
@@ -178,7 +235,7 @@ class _OcrDialogState extends State<_OcrDialog> {
                     ],
                   ),
                 ),
-              if (win)
+              if (win && !_ai)
                 Wrap(
                   spacing: 8,
                   children: [

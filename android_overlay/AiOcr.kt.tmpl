@@ -1,0 +1,257 @@
+package __PACKAGE__
+
+import ai.onnxruntime.OnnxTensor
+import ai.onnxruntime.OrtEnvironment
+import ai.onnxruntime.OrtSession
+import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.Matrix
+import android.media.ExifInterface
+import org.json.JSONArray
+import org.json.JSONObject
+import java.nio.FloatBuffer
+import kotlin.math.ceil
+import kotlin.math.max
+import kotlin.math.min
+import kotlin.math.roundToInt
+
+/**
+ * AI 文字辨識：PaddleOCR（PP-OCRv6 small）ONNX 模型，離線執行。
+ * 流程：偵測（DB）→ 切出每一行 → 辨識（CRNN + CTC）。
+ * 模型檔放在 assets/ai_ocr/（由 tool/patch_android.py 在建置時放入）。
+ */
+object AiOcr {
+    private const val DIR = "ai_ocr"
+    private const val MAX_SIDE = 1600
+    private const val LIMIT_MIN = 736
+    private var det: OrtSession? = null
+    private var rec: OrtSession? = null
+    private var chars: List<String> = emptyList()
+
+    fun available(ctx: Context): Boolean = try {
+        val names = ctx.assets.list(DIR)?.toSet() ?: emptySet()
+        "det.onnx" in names && "rec.onnx" in names && "dict.txt" in names
+    } catch (e: Exception) {
+        false
+    }
+
+    private fun readAsset(ctx: Context, name: String): ByteArray =
+        ctx.assets.open("$DIR/$name").use { it.readBytes() }
+
+    @Synchronized
+    private fun init(ctx: Context) {
+        if (det != null && rec != null) return
+        val env = OrtEnvironment.getEnvironment()
+        val o1 = OrtSession.SessionOptions()
+        o1.setIntraOpNumThreads(4)
+        val o2 = OrtSession.SessionOptions()
+        o2.setIntraOpNumThreads(4)
+        det = env.createSession(readAsset(ctx, "det.onnx"), o1)
+        rec = env.createSession(readAsset(ctx, "rec.onnx"), o2)
+        val dict = String(readAsset(ctx, "dict.txt"), Charsets.UTF_8).split("\n")
+        chars = listOf("blank") + dict + listOf(" ")
+    }
+
+    private fun loadBitmap(path: String): Bitmap {
+        val opts = BitmapFactory.Options()
+        opts.inPreferredConfig = Bitmap.Config.ARGB_8888
+        var bmp = BitmapFactory.decodeFile(path, opts) ?: throw IllegalStateException("cannot decode image")
+        val orient = try {
+            ExifInterface(path).getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)
+        } catch (e: Exception) {
+            ExifInterface.ORIENTATION_NORMAL
+        }
+        val m = Matrix()
+        when (orient) {
+            ExifInterface.ORIENTATION_ROTATE_90 -> m.postRotate(90f)
+            ExifInterface.ORIENTATION_ROTATE_180 -> m.postRotate(180f)
+            ExifInterface.ORIENTATION_ROTATE_270 -> m.postRotate(270f)
+            ExifInterface.ORIENTATION_FLIP_HORIZONTAL -> m.postScale(-1f, 1f)
+            ExifInterface.ORIENTATION_FLIP_VERTICAL -> m.postScale(1f, -1f)
+            else -> return bmp
+        }
+        val r = Bitmap.createBitmap(bmp, 0, 0, bmp.width, bmp.height, m, true)
+        if (r !== bmp) bmp.recycle()
+        bmp = r
+        return bmp
+    }
+
+    /** 把 Bitmap 轉成 NCHW、BGR、(x/255-0.5)/0.5 的 float 陣列。 */
+    private fun toTensorData(bmp: Bitmap): FloatArray {
+        val w = bmp.width
+        val h = bmp.height
+        val px = IntArray(w * h)
+        bmp.getPixels(px, 0, w, 0, 0, w, h)
+        val plane = w * h
+        val out = FloatArray(3 * plane)
+        for (i in 0 until plane) {
+            val p = px[i]
+            val r = (p shr 16) and 0xFF
+            val g = (p shr 8) and 0xFF
+            val b = p and 0xFF
+            out[i] = b / 127.5f - 1f
+            out[plane + i] = g / 127.5f - 1f
+            out[2 * plane + i] = r / 127.5f - 1f
+        }
+        return out
+    }
+
+    private class Box(val x0: Int, val y0: Int, val x1: Int, val y1: Int)
+
+    /** 回傳 JSON：{"w":,"h":,"lines":[{"x":,"y":,"w":,"h":,"text":,"score":}]} */
+    fun recognize(ctx: Context, path: String): String {
+        init(ctx)
+        val env = OrtEnvironment.getEnvironment()
+        val bmp = loadBitmap(path)
+        val W = bmp.width
+        val H = bmp.height
+
+        // ── 偵測：縮放成 32 的倍數，最大邊不超過 MAX_SIDE ──
+        var r = 1.0
+        if (min(H, W) < LIMIT_MIN) r = LIMIT_MIN.toDouble() / min(H, W)
+        if (max(H, W) * r > MAX_SIDE) r = MAX_SIDE.toDouble() / max(H, W)
+        val rh = max(32, (Math.round(H * r / 32.0) * 32).toInt())
+        val rw = max(32, (Math.round(W * r / 32.0) * 32).toInt())
+        val small = Bitmap.createScaledBitmap(bmp, rw, rh, true)
+        val data = toTensorData(small)
+        if (small !== bmp) small.recycle()
+
+        val prob = FloatArray(rh * rw)
+        OnnxTensor.createTensor(env, FloatBuffer.wrap(data), longArrayOf(1, 3, rh.toLong(), rw.toLong())).use { t ->
+            det!!.run(mapOf("x" to t)).use { res ->
+                @Suppress("UNCHECKED_CAST")
+                val out = res.get(0).value as Array<Array<Array<FloatArray>>>
+                val m = out[0][0]
+                for (y in 0 until rh) System.arraycopy(m[y], 0, prob, y * rw, rw)
+            }
+        }
+
+        // 二值化（0.3）＋ 2x2 膨脹
+        val mask = BooleanArray(rh * rw)
+        for (y in 0 until rh) {
+            for (x in 0 until rw) {
+                var on = prob[y * rw + x] > 0.3f
+                if (!on && x > 0 && prob[y * rw + x - 1] > 0.3f) on = true
+                if (!on && y > 0 && prob[(y - 1) * rw + x] > 0.3f) on = true
+                if (!on && x > 0 && y > 0 && prob[(y - 1) * rw + x - 1] > 0.3f) on = true
+                mask[y * rw + x] = on
+            }
+        }
+
+        // 連通區域（8 鄰接）→ 外框
+        val seen = BooleanArray(rh * rw)
+        val stack = IntArray(rh * rw)
+        val boxes = ArrayList<Box>()
+        val sx = W.toDouble() / rw
+        val sy = H.toDouble() / rh
+        for (start in 0 until rh * rw) {
+            if (!mask[start] || seen[start]) continue
+            var sp = 0
+            stack[sp++] = start
+            seen[start] = true
+            var minX = Int.MAX_VALUE
+            var maxX = -1
+            var minY = Int.MAX_VALUE
+            var maxY = -1
+            var cnt = 0
+            var sum = 0.0
+            while (sp > 0) {
+                val cur = stack[--sp]
+                val cy = cur / rw
+                val cx = cur - cy * rw
+                if (cx < minX) minX = cx
+                if (cx > maxX) maxX = cx
+                if (cy < minY) minY = cy
+                if (cy > maxY) maxY = cy
+                cnt++
+                sum += prob[cur]
+                for (dy in -1..1) {
+                    val ny = cy + dy
+                    if (ny < 0 || ny >= rh) continue
+                    for (dx in -1..1) {
+                        val nx = cx + dx
+                        if (nx < 0 || nx >= rw) continue
+                        val ni = ny * rw + nx
+                        if (mask[ni] && !seen[ni]) {
+                            seen[ni] = true
+                            stack[sp++] = ni
+                        }
+                    }
+                }
+            }
+            val bw = maxX - minX + 1
+            val bh = maxY - minY + 1
+            if (min(bw, bh) < 3) continue
+            if (sum / cnt < 0.5) continue
+            if (boxes.size >= 1000) break
+            val d = bw.toDouble() * bh * 1.6 / (2.0 * (bw + bh))
+            val x0 = max(0, ((minX - d) * sx).roundToInt())
+            val x1 = min(W, ((maxX + 1 + d) * sx).roundToInt())
+            val y0 = max(0, ((minY - d) * sy).roundToInt())
+            val y1 = min(H, ((maxY + 1 + d) * sy).roundToInt())
+            if (x1 - x0 < 5 || y1 - y0 < 5) continue
+            boxes.add(Box(x0, y0, x1, y1))
+        }
+        boxes.sortWith(compareBy<Box>({ it.y0 }, { it.x0 }))
+
+        // ── 辨識：每一行縮成高度 48，CTC 解碼 ──
+        val lines = JSONArray()
+        for (b in boxes) {
+            val bw = b.x1 - b.x0
+            val bh = b.y1 - b.y0
+            val crop = Bitmap.createBitmap(bmp, b.x0, b.y0, bw, bh)
+            val tw = max(8, ceil(48.0 * bw / bh).toInt())
+            val scaled = Bitmap.createScaledBitmap(crop, tw, 48, true)
+            val d = toTensorData(scaled)
+            if (scaled !== crop) scaled.recycle()
+            crop.recycle()
+            var text = ""
+            var score = 0.0
+            OnnxTensor.createTensor(env, FloatBuffer.wrap(d), longArrayOf(1, 3, 48, tw.toLong())).use { t ->
+                rec!!.run(mapOf("x" to t)).use { res ->
+                    @Suppress("UNCHECKED_CAST")
+                    val out = res.get(0).value as Array<Array<FloatArray>>
+                    val seq = out[0]
+                    val sb = StringBuilder()
+                    var last = -1
+                    var confSum = 0.0
+                    var confN = 0
+                    for (row in seq) {
+                        var bi = 0
+                        var bv = row[0]
+                        for (k in 1 until row.size) {
+                            if (row[k] > bv) {
+                                bv = row[k]
+                                bi = k
+                            }
+                        }
+                        if (bi != last && bi != 0 && bi < chars.size) {
+                            sb.append(chars[bi])
+                            confSum += bv
+                            confN++
+                        }
+                        last = bi
+                    }
+                    text = sb.toString()
+                    score = if (confN > 0) confSum / confN else 0.0
+                }
+            }
+            if (text.isBlank() || score < 0.3) continue
+            val o = JSONObject()
+            o.put("x", b.x0)
+            o.put("y", b.y0)
+            o.put("w", bw)
+            o.put("h", bh)
+            o.put("text", text)
+            o.put("score", score)
+            lines.put(o)
+        }
+        bmp.recycle()
+        val root = JSONObject()
+        root.put("w", W)
+        root.put("h", H)
+        root.put("lines", lines)
+        return root.toString()
+    }
+}

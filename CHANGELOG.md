@@ -1,5 +1,23 @@
 # 更新紀錄
 
+## 2.5.1
+新功能：
+- 圖片轉文字新增「AI 辨識（PaddleOCR）」，Windows 與 Android 都支援：
+  - 內建離線模型，預設使用；對路徑、程式碼、英文與符號多的畫面、拍螢幕的照片，辨識明顯更準確。
+  - 可在辨識視窗的「辨識引擎」切回標準（Windows 內建 OCR／手機 ML Kit）；AI 辨識失敗時會自動改用標準引擎。
+  - 辨識後的文字依原本位置排列，並可直接在圖片上點選或框選要複製的內容。
+  - 全程在本機離線完成，圖片不會上傳。
+- 注意：因為內建 AI 模型，Android 安裝檔與 Windows 壓縮檔會比以前大不少。
+
+English:
+New features:
+- Image to text now has "AI recognition (PaddleOCR)" on both Windows and Android:
+  - A bundled offline model, used by default; clearly more accurate on paths, code, English / symbol-heavy screens and photos of screens.
+  - Switch back to Standard (Windows built-in OCR / ML Kit on phones) under "Engine" in the recognition window; if AI recognition fails the app falls back to Standard automatically.
+  - Recognized text keeps its original layout, and you can tap or drag on the picture to copy only what you need.
+  - Everything runs offline on your device; images are never uploaded.
+- Note: because the AI model is bundled, the Android APK and the Windows zip are noticeably larger than before.
+
 ## 2.3.1
 新功能：
 - 新增「圖片轉文字」：

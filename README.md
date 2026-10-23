@@ -42,6 +42,7 @@ Encrypted notes and password manager for Android and Windows, built with Flutter
 
 | Version | Highlights / 重點 |
 |---|---|
+| 2.5.1 | AI recognition (PaddleOCR) for image to text on Windows and Android / 圖片轉文字新增 AI 辨識（PaddleOCR），Windows 與 Android 皆支援 |
 | 2.3.1 | Image to text (camera / photo / Windows screenshot, crop, layout-preserving, select text on the image) / 圖片轉文字（拍照、選圖、Windows 截圖、框選範圍、保留排列、在圖上選取文字） |
 | 2.1.3 | Formatting bar, round-checkbox checklists, attachments (handwriting, video, audio recording), save as file / .zip / 格式列、圓形勾選清單、附件（手寫、影片、錄音）、另存新檔與 .zip 打包 |
 | 1.8.4 | Auto-detect pasted code blocks (language label + commands) / 貼上的程式碼（語言標籤＋指令）自動辨識成程式碼框 |

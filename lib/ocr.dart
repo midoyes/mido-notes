@@ -4,6 +4,8 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
+import 'package:flutter/services.dart' show MethodChannel;
+
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -133,7 +135,10 @@ Future<OcrData> recognizeData(
   bool enhance = false,
   bool invert = false,
   double? maxSide,
+  bool ai = false,
 }) async {
+  if (ai && Platform.isWindows) return _aiWindows(image);
+  if (ai && Platform.isAndroid) return _aiAndroid(image);
   if (Platform.isAndroid || Platform.isIOS) {
     final d = await _mlkit(image);
     final sz = await imageSize(image);
@@ -481,4 +486,123 @@ Future<ui.Size> imageSize(Uint8List src) async {
   final codec = await ui.instantiateImageCodec(src);
   final img = (await codec.getNextFrame()).image;
   return ui.Size(img.width.toDouble(), img.height.toDouble());
+}
+
+// ───────────── AI 辨識（Windows）：內建的 RapidOCR（PaddleOCR 模型，離線）─────────────
+
+const MethodChannel _aiChannel = MethodChannel('mido_notes/ocr');
+
+/// 這個平台有沒有 AI 辨識可用（Windows、Android）。
+bool get ocrHasAi => Platform.isWindows || Platform.isAndroid;
+
+String _aiDir() => '${File(Platform.resolvedExecutable).parent.path}\\ocr';
+
+/// 內建的官方 Python（embeddable）執行 mido_ocr.py。
+String _aiPython() => '${_aiDir()}\\python\\python.exe';
+String _aiScript() => '${_aiDir()}\\mido_ocr.py';
+
+/// 這個安裝包裡有沒有 AI 辨識程式（只有 Windows 正式建置才有）。
+Future<bool> aiOcrAvailable() async {
+  if (Platform.isAndroid) {
+    try {
+      return await _aiChannel.invokeMethod<bool>('available') ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
+  if (!Platform.isWindows) return false;
+  try {
+    return await File(_aiPython()).exists() && await File(_aiScript()).exists();
+  } catch (_) {
+    return false;
+  }
+}
+
+Future<OcrData> _aiWindows(Uint8List image) async {
+  final exe = _aiPython();
+  if (!await File(exe).exists() || !await File(_aiScript()).exists()) {
+    throw OcrException(tr('找不到 AI 辨識程式。'));
+  }
+  final dir = await _tmp();
+  final stamp = DateTime.now().microsecondsSinceEpoch;
+  final img = File('${dir.path}\\ai_$stamp.${_imgExt(image)}');
+  final out = File('${dir.path}\\ai_$stamp.json');
+  try {
+    await img.writeAsBytes(image, flush: true);
+    final p = await Process.run(
+      exe,
+      <String>[_aiScript(), '--image', img.path, '--out', out.path],
+      stdoutEncoding: null,
+      stderrEncoding: null,
+    ).timeout(const Duration(seconds: 180));
+    if (!await out.exists()) {
+      throw OcrException('${tr('AI 辨識失敗')}：exit ${p.exitCode}');
+    }
+    final map = jsonDecode(utf8.decode(await out.readAsBytes(), allowMalformed: true));
+    if (map is! Map) throw OcrException(tr('AI 辨識失敗'));
+    if (map['error'] != null) {
+      throw OcrException('${tr('AI 辨識失敗')}：${map['error']}');
+    }
+    return _parseAi(map);
+  } on OcrException {
+    rethrow;
+  } on ProcessException catch (e) {
+    throw OcrException('${tr('無法啟動 AI 辨識程式')}：${e.message}');
+  } catch (e) {
+    throw OcrException('${tr('AI 辨識失敗')}：$e');
+  } finally {
+    for (final f in <File>[img, out]) {
+      try {
+        if (await f.exists()) await f.delete();
+      } catch (_) {}
+    }
+  }
+}
+
+OcrData _parseAi(Map map) {
+  final words = <OcrWord>[];
+  final plain = <String>[];
+  for (final l in (map['lines'] as List? ?? const [])) {
+    if (l is! Map) continue;
+    final t = (l['text'] ?? '').toString();
+    if (t.trim().isEmpty) continue;
+    words.add(OcrWord(
+      (l['x'] as num).toDouble(),
+      (l['y'] as num).toDouble(),
+      (l['w'] as num).toDouble(),
+      (l['h'] as num).toDouble(),
+      t,
+    ));
+    plain.add(t);
+  }
+  return OcrData(
+    plain.join('\n'),
+    words,
+    w: (map['w'] as num?)?.toDouble() ?? 0,
+    h: (map['h'] as num?)?.toDouble() ?? 0,
+  );
+}
+
+/// Android：Kotlin 端用 ONNX Runtime 執行 PaddleOCR 模型。
+Future<OcrData> _aiAndroid(Uint8List image) async {
+  final dir = await _tmp();
+  final f = File('${dir.path}/ai_${DateTime.now().microsecondsSinceEpoch}.${_imgExt(image)}');
+  try {
+    await f.writeAsBytes(image, flush: true);
+    final s = await _aiChannel
+        .invokeMethod<String>('recognize', <String, dynamic>{'path': f.path})
+        .timeout(const Duration(seconds: 180));
+    if (s == null || s.isEmpty) throw OcrException(tr('AI 辨識失敗'));
+    final map = jsonDecode(s);
+    if (map is! Map) throw OcrException(tr('AI 辨識失敗'));
+    return _parseAi(map);
+  } on OcrException {
+    rethrow;
+  } catch (e) {
+    throw OcrException('${tr('AI 辨識失敗')}：$e');
+  } finally {
+    try {
+      if (await f.exists()) await f.delete();
+    } catch (_) {}
+  }
 }

@@ -196,3 +196,79 @@ for name, snippet in (("build.gradle.kts", PRO_KTS), ("build.gradle", PRO_GROOVY
             app_gradle.write_text(text + snippet, encoding="utf-8")
         print(f"proguard rules -> {app_gradle.relative_to(ROOT)}")
         break
+
+# 8. AI 文字辨識（PaddleOCR 模型 + ONNX Runtime，離線）
+#    - Kotlin：AiOcr.kt（偵測 → 辨識），MainActivity 提供 "mido_notes/ocr" 通道
+#    - 模型：從 rapidocr 的 wheel 取出 PP-OCRv6 small 偵測／辨識模型與字典，放進 assets/ai_ocr/
+#      模型取不到也不會中斷建置，App 會自動隱藏 AI 辨識（改用 ML Kit）。
+ORT_KTS = '''
+// --- Mido筆記：ONNX Runtime（AI 文字辨識）---
+dependencies {
+    implementation("com.microsoft.onnxruntime:onnxruntime-android:1.20.0")
+}
+'''
+ORT_GROOVY = '''
+// --- Mido筆記：ONNX Runtime（AI 文字辨識）---
+dependencies {
+    implementation 'com.microsoft.onnxruntime:onnxruntime-android:1.20.0'
+}
+'''
+for name, snippet in (("build.gradle.kts", ORT_KTS), ("build.gradle", ORT_GROOVY)):
+    app_gradle = ANDROID / "app" / name
+    if app_gradle.exists():
+        text = app_gradle.read_text(encoding="utf-8")
+        if "onnxruntime-android" not in text:
+            app_gradle.write_text(text + snippet, encoding="utf-8")
+        print(f"onnxruntime-android -> {app_gradle.relative_to(ROOT)}")
+        break
+
+ai_kt = (OVERLAY / "AiOcr.kt.tmpl").read_text(encoding="utf-8").replace("__PACKAGE__", m.group(1))
+(main_activity.parent / "AiOcr.kt").write_text(ai_kt, encoding="utf-8")
+print("AiOcr.kt written")
+
+
+def fetch_ai_models() -> bool:
+    import glob
+    import shutil
+    import subprocess
+    import tempfile
+    import zipfile
+
+    tmp = pathlib.Path(tempfile.mkdtemp(prefix="ai_ocr_"))
+    try:
+        subprocess.check_call([sys.executable, "-m", "pip", "download", "rapidocr==3.10.0", "--no-deps", "-d", str(tmp)])
+        try:
+            subprocess.check_call([sys.executable, "-m", "pip", "install", "onnxruntime"])
+        except subprocess.CalledProcessError:
+            subprocess.check_call([sys.executable, "-m", "pip", "install", "--break-system-packages", "onnxruntime"])
+        wheels = glob.glob(str(tmp / "rapidocr-*.whl"))
+        if not wheels:
+            print("ai_ocr: rapidocr wheel not found", file=sys.stderr)
+            return False
+        out = ANDROID / "app" / "src" / "main" / "assets" / "ai_ocr"
+        out.mkdir(parents=True, exist_ok=True)
+        with zipfile.ZipFile(wheels[0]) as z:
+            for src, dst in (
+                ("rapidocr/models/PP-OCRv6_det_small.onnx", "det.onnx"),
+                ("rapidocr/models/PP-OCRv6_rec_small.onnx", "rec.onnx"),
+            ):
+                with z.open(src) as f, open(out / dst, "wb") as g:
+                    shutil.copyfileobj(f, g)
+        # 用新的 python 行程讀字典：剛用 pip 裝好的套件，目前這個行程可能還看不到（user site 尚未在路徑上）
+        code = (
+            "import sys, onnxruntime as ort\n"
+            "s = ort.InferenceSession(sys.argv[1], providers=['CPUExecutionProvider'])\n"
+            "c = s.get_modelmeta().custom_metadata_map['character'].splitlines()\n"
+            "open(sys.argv[2], 'w', encoding='utf-8').write('\\n'.join(c))\n"
+            "print(len(c))\n"
+        )
+        subprocess.check_call([sys.executable, "-c", code, str(out / "rec.onnx"), str(out / "dict.txt")])
+        print("ai_ocr: models ready")
+        return True
+    except Exception as e:  # noqa: BLE001
+        print("ai_ocr: model setup failed, Android will use ML Kit only:", e, file=sys.stderr)
+        shutil.rmtree(ANDROID / "app" / "src" / "main" / "assets" / "ai_ocr", ignore_errors=True)
+        return False
+
+
+fetch_ai_models()

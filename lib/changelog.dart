@@ -9,6 +9,19 @@ class ChangelogEntry {
 
 const List<ChangelogEntry> kChangelog = <ChangelogEntry>[
   ChangelogEntry(
+    '2.5.1',
+    [
+      '圖片轉文字新增「AI 辨識（PaddleOCR）」，Windows 與 Android 皆支援，內建離線模型、預設使用，失敗時自動改用標準引擎。',
+      '對路徑、程式碼、英文與符號多的畫面，以及拍螢幕的照片，辨識明顯更準確；結果依原本位置排列。',
+      '因為內建 AI 模型，安裝檔會比以前大不少。',
+    ],
+    [
+      'Image to text now has "AI recognition (PaddleOCR)" on Windows and Android: bundled offline model, used by default, with automatic fallback to the standard engine.',
+      'Clearly more accurate on paths, code, English / symbol-heavy screens and photos of screens; the result keeps its original layout.',
+      'Because the AI model is bundled, the installer is noticeably larger than before.',
+    ],
+  ),
+  ChangelogEntry(
     '2.3.1',
     [
       '新增圖片轉文字：手機可拍照掃描或選圖；已存的附件圖片也能辨識；Windows 可選圖或用 Win+Shift+S 截圖後直接辨識。',

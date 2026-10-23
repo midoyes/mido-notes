@@ -35,5 +35,29 @@ class MainActivity : FlutterFragmentActivity() {
                     result.notImplemented()
                 }
             }
+
+        // AI 文字辨識（PaddleOCR 模型，離線）
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "mido_notes/ocr")
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "available" -> result.success(AiOcr.available(applicationContext))
+                    "recognize" -> {
+                        val path = call.argument<String>("path")
+                        if (path == null) {
+                            result.error("args", "missing path", null)
+                        } else {
+                            Thread {
+                                try {
+                                    val json = AiOcr.recognize(applicationContext, path)
+                                    runOnUiThread { result.success(json) }
+                                } catch (t: Throwable) {
+                                    runOnUiThread { result.error("ocr", t.toString(), null) }
+                                }
+                            }.start()
+                        }
+                    }
+                    else -> result.notImplemented()
+                }
+            }
     }
 }
