@@ -29,8 +29,101 @@ class _HomeScreenState extends State<HomeScreen> {
   Timer? _autoTimer;
   double _scrollSpeed = 0;
 
+  // 長按記事本：先跳出和右上角「⋮」相同的選單；繼續按住並拖動就變成一般的移動（選單自動收起）
+  Offset _pressPos = Offset.zero; // 最近一次手指／滑鼠按下的位置
+  Offset? _dragOrigin;
+
+  // 選單用 Overlay 自己畫（不開新頁面），這樣長按後繼續拖動時，下面的記事本仍然收得到「放開」事件，
+  // 才能照常移動排序位置。
+  OverlayEntry? _menuEntry;
+  final ValueNotifier<bool> _holding = ValueNotifier<bool>(false);
+
+  void _showNoteMenu(Note n, Offset pos, {required bool holding}) {
+    if (n.isTrashed || !mounted) return;
+    _closeNoteMenu();
+    _holding.value = holding;
+    final items = noteMenuItems(n);
+    final size = MediaQuery.of(context).size;
+    const w = 248.0;
+    final h = items.length * 48.0 + 16;
+    var left = pos.dx;
+    if (left > size.width - w - 8) left = size.width - w - 8;
+    if (left < 8) left = 8;
+    var top = pos.dy;
+    if (top > size.height - h - 8) top = size.height - h - 8;
+    if (top < 8) top = 8;
+    _menuEntry = OverlayEntry(
+      builder: (ctx) {
+        final cs = Theme.of(ctx).colorScheme;
+        return Stack(
+          children: [
+            // 點選單以外的地方關閉選單（還在按住拖動的時候不攔截，讓拖曳照常進行）
+            Positioned.fill(
+              child: ValueListenableBuilder<bool>(
+                valueListenable: _holding,
+                builder: (_, hold, __) => IgnorePointer(
+                  ignoring: hold,
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: _closeNoteMenu,
+                    onSecondaryTap: _closeNoteMenu,
+                    child: const SizedBox.expand(),
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              left: left,
+              top: top,
+              width: w,
+              child: Material(
+                elevation: 8,
+                borderRadius: BorderRadius.circular(12),
+                color: cs.surfaceContainerHigh,
+                clipBehavior: Clip.antiAlias,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      for (final it in items)
+                        InkWell(
+                          onTap: () {
+                            _closeNoteMenu();
+                            _menuAction(n, it.key);
+                          },
+                          child: SizedBox(
+                            height: 48,
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              child: Align(
+                                alignment: Alignment.centerLeft,
+                                child: Text(it.value, maxLines: 1, overflow: TextOverflow.ellipsis),
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+    Overlay.of(context).insert(_menuEntry!);
+  }
+
+  void _closeNoteMenu() {
+    _menuEntry?.remove();
+    _menuEntry = null;
+  }
+
   @override
   void dispose() {
+    _closeNoteMenu();
+    _holding.dispose();
     _autoTimer?.cancel();
     _scroll.dispose();
     _search.dispose();
@@ -109,18 +202,40 @@ class _HomeScreenState extends State<HomeScreen> {
       onTap: () => _openNote(n),
       onMenu: (a) => _menuAction(n, a),
     );
-    if (n.isTrashed || _searching) return card;
+    if (n.isTrashed) return card;
+    if (_searching) {
+      // 搜尋結果不能排序，但長按一樣可以跳出選單
+      return GestureDetector(
+        onLongPressStart: (d) => _showNoteMenu(n, d.globalPosition, holding: false),
+        child: card,
+      );
+    }
     return DragTarget<String>(
       onWillAcceptWithDetails: (d) => d.data != n.id,
       onAcceptWithDetails: (d) => _reorder(notes, d.data, n.id),
       builder: (ctx, cand, _) {
         final hot = cand.isNotEmpty;
-        return LongPressDraggable<String>(
+        return Listener(
+          behavior: HitTestBehavior.translucent,
+          onPointerDown: (e) => _pressPos = e.position,
+          child: LongPressDraggable<String>(
           data: n.id,
           dragAnchorStrategy: pointerDragAnchorStrategy,
-          onDragStarted: _dragStart,
-          onDragUpdate: (d) => _dragMove(d.globalPosition),
-          onDragEnd: (_) => _dragEnd(),
+          onDragStarted: () {
+            _dragStart();
+            _dragOrigin = null;
+            _showNoteMenu(n, _pressPos, holding: true);
+          },
+          onDragUpdate: (d) {
+            _dragMove(d.globalPosition);
+            _dragOrigin ??= d.globalPosition;
+            if ((d.globalPosition - _dragOrigin!).distance > 12) _closeNoteMenu();
+          },
+          onDragEnd: (_) {
+            _dragEnd();
+            _dragOrigin = null;
+            _holding.value = false; // 放開了：選單若還在，就可以點選或點外面關閉
+          },
           feedback: Material(
             elevation: 8,
             borderRadius: BorderRadius.circular(12),
@@ -148,6 +263,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             child: card,
           ),
+        ),
         );
       },
     );
@@ -167,6 +283,21 @@ class _HomeScreenState extends State<HomeScreen> {
       case 'folder':
         final r = await pickFolder(context, current: n.folderId);
         if (r != null) vault.moveToFolder(n.id, r.isEmpty ? null : r);
+      case 'duplicate':
+        if (!await ensureNoteAccess(context, n)) return;
+        if (!mounted) return;
+        final dst = await pickFolder(
+          context,
+          current: n.folderId,
+          title: tr('複製到資料夾'),
+        );
+        if (dst == null || !mounted) return;
+        final copy = await vault.duplicateNote(n, dst.isEmpty ? null : dst);
+        if (copy != null && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(tr('已複製為「${copy.displayTitle}」'))),
+          );
+        }
       case 'trash':
         if (await ensureNoteAccess(context, n)) _trash(n);
     }
@@ -1002,6 +1133,21 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
+/// 記事本的選項（卡片右上角「⋮」與長按共用）：key = 動作代號，value = 顯示文字。
+List<MapEntry<String, String>> noteMenuItems(Note note) {
+  final isLogin = note.type == NoteType.login;
+  return [
+    if (isLogin && note.credentials.isNotEmpty)
+      MapEntry('copy', tr('快速複製帳號 / 密碼')),
+    MapEntry('pin', note.pinned ? tr('取消釘選') : tr('釘選')),
+    MapEntry('lock', note.locked ? tr('解除鎖定') : tr('鎖定（需輸入鎖定密碼）')),
+    MapEntry('color', tr('筆記顏色')),
+    MapEntry('folder', tr('移到資料夾')),
+    MapEntry('duplicate', tr('複製到資料夾')),
+    MapEntry('trash', tr('刪除（移到回收桶）')),
+  ];
+}
+
 class _NoteCard extends StatelessWidget {
   const _NoteCard({
     required this.note,
@@ -1064,19 +1210,8 @@ class _NoteCard extends StatelessWidget {
             ),
             onSelected: onMenu,
             itemBuilder: (_) => [
-              if (isLogin && note.credentials.isNotEmpty)
-                PopupMenuItem(value: 'copy', child: Text(tr('快速複製帳號 / 密碼'))),
-              PopupMenuItem(
-                value: 'pin',
-                child: Text(note.pinned ? tr('取消釘選') : tr('釘選')),
-              ),
-              PopupMenuItem(
-                value: 'lock',
-                child: Text(note.locked ? tr('解除鎖定') : tr('鎖定（需輸入鎖定密碼）')),
-              ),
-              PopupMenuItem(value: 'color', child: Text(tr('筆記顏色'))),
-              PopupMenuItem(value: 'folder', child: Text(tr('移到資料夾'))),
-              PopupMenuItem(value: 'trash', child: Text(tr('刪除（移到回收桶）'))),
+              for (final e in noteMenuItems(note))
+                PopupMenuItem(value: e.key, child: Text(e.value)),
             ],
           ),
       ],

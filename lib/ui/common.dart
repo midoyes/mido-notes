@@ -143,11 +143,11 @@ Future<bool> confirmDialog(
 }
 
 /// 選擇資料夾。回傳：資料夾 id；'' 代表「不分類」；null 代表取消。
-Future<String?> pickFolder(BuildContext context, {String? current}) {
+Future<String?> pickFolder(BuildContext context, {String? current, String? title}) {
   return showDialog<String>(
     context: context,
     builder: (ctx) => SimpleDialog(
-      title: Text(tr('移到資料夾')),
+      title: Text(title ?? tr('移到資料夾')),
       children: [
         ListTile(
           leading: Icon(

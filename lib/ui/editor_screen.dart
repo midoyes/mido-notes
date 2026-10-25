@@ -522,28 +522,39 @@ class _EditorScreenState extends State<EditorScreen> with WidgetsBindingObserver
     });
   }
 
-  /// 把內文裡第 [textOffset] 個字元捲到畫面上方一點的位置。
+  RenderEditable? _findEditable(RenderObject root) {
+    RenderEditable? found;
+    void visit(RenderObject o) {
+      if (found != null) return;
+      if (o is RenderEditable) {
+        found = o;
+        return;
+      }
+      o.visitChildren(visit);
+    }
+
+    visit(root);
+    return found;
+  }
+
+  /// 把內文裡第 [textOffset] 個字元所在的那一行捲到可視區域的正中央。
+  /// 直接向輸入框「真正排好版的文字」問游標的位置（不自己估算），所以不受字型、寬度、縮放影響。
   void _scrollToTextOffset(int textOffset) {
     final ctx = _bodyKey.currentContext;
     if (ctx == null || !_scroll.hasClients) return;
     final box = ctx.findRenderObject();
-    if (box is! RenderBox || !box.hasSize) return;
-    final hPad = _isLogin ? 32.0 : 0.0;
-    final vPad = _isLogin ? 16.0 : 8.0;
-    final tp = TextPainter(
-      text: TextSpan(
-        text: _body.text,
-        style: Theme.of(context).textTheme.bodyLarge,
-      ),
-      textDirection: TextDirection.ltr,
-      textScaler: MediaQuery.textScalerOf(context),
-    )..layout(maxWidth: math.max(1.0, box.size.width - hPad));
+    if (box == null) return;
+    final re = _findEditable(box);
+    if (re == null || !re.hasSize) return;
+    final vpObj = _scroll.position.context.storageContext.findRenderObject();
+    if (vpObj is! RenderBox || !vpObj.hasSize) return;
     final off = math.min(textOffset, _body.text.length);
-    final dy = tp.getOffsetForCaret(TextPosition(offset: off), Rect.zero).dy;
-    tp.dispose();
-    final top = RenderAbstractViewport.of(box).getOffsetToReveal(box, 0.0).offset;
+    final caret = re.getLocalRectForCaret(TextPosition(offset: off));
+    final lineCenterY = re.localToGlobal(caret.center).dy;
+    final viewCenterY = vpObj.localToGlobal(vpObj.size.center(Offset.zero)).dy;
     final pos = _scroll.position;
-    final target = (top + vPad + dy - 140).clamp(pos.minScrollExtent, pos.maxScrollExtent);
+    final target = (pos.pixels + lineCenterY - viewCenterY)
+        .clamp(pos.minScrollExtent, pos.maxScrollExtent);
     _scroll.animateTo(
       target.toDouble(),
       duration: const Duration(milliseconds: 250),
@@ -592,7 +603,7 @@ class _EditorScreenState extends State<EditorScreen> with WidgetsBindingObserver
         if (target != null) {
           Scrollable.ensureVisible(
             target,
-            alignment: 0.1,
+            alignment: 0.5,
             duration: const Duration(milliseconds: 300),
             curve: Curves.easeOut,
           );

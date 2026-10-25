@@ -1,5 +1,17 @@
 # 更新紀錄
 
+## 2.6.2
+新功能：
+- 筆記內搜尋：按「上一個／下一個」跳到每個吻合的關鍵字時，會捲到畫面正中央並以深色標示；從首頁搜尋點進記事本，第一個吻合處也置中。Windows 與 Android 都適用。
+- 首頁長按記事本會跳出與右上角「⋮」相同的選單；繼續按住並拖動，仍可自由移動記事本在首頁的位置（選單會自動收起）。搜尋結果中長按也能開選單。
+- 新增「複製到資料夾」：選一個資料夾（或不分類），複製出一份新的記事本並自動命名（「原名 複製」，重複時加編號），附件也會一併複製。「移到資料夾」維持原本功能。
+
+English:
+New features:
+- In-note search: Previous / Next now scroll every match to the vertical center of the screen with a stronger highlight; the first match is centered too when you open a note from the home-screen search. Works on Windows and Android.
+- Long-pressing a note on the home screen opens the same menu as the top-right "⋮"; keep holding and drag to move the note's position as before (the menu closes automatically). Long-press also works on search results.
+- New "Copy to folder": pick a folder (or none) to make a copy of the note with an automatic name ("Name Copy", numbered if it already exists); attachments are copied too. "Move to folder" works as before.
+
 ## 2.5.1
 新功能：
 - 圖片轉文字新增「AI 辨識（PaddleOCR）」，Windows 與 Android 都支援：

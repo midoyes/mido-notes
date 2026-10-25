@@ -9,6 +9,19 @@ class ChangelogEntry {
 
 const List<ChangelogEntry> kChangelog = <ChangelogEntry>[
   ChangelogEntry(
+    '2.6.2',
+    [
+      '筆記內搜尋跳到每個吻合的關鍵字時，都會置中並以深色標示；從首頁搜尋點進記事本，第一個吻合處也置中。',
+      '首頁長按記事本會跳出與右上角「⋮」相同的選單；繼續按住拖動仍可自由移動位置。',
+      '新增「複製到資料夾」：自動命名（原名 複製），附件一併複製。',
+    ],
+    [
+      'In-note search centers every match with a stronger highlight; the first match is centered when opened from home search.',
+      'Long-pressing a note on the home screen opens the same menu as "⋮"; keep holding and drag to move it as before.',
+      'New "Copy to folder": copies the note with an automatic name (Name Copy), attachments included.',
+    ],
+  ),
+  ChangelogEntry(
     '2.5.1',
     [
       '圖片轉文字新增「AI 辨識（PaddleOCR）」，Windows 與 Android 皆支援，內建離線模型、預設使用，失敗時自動改用標準引擎。',

@@ -574,6 +574,61 @@ class VaultStore extends ChangeNotifier {
     _persist();
   }
 
+  /// 複製一則記事本到 [folderId]（null = 不分類）。名稱自動命名：「原名 複製」，
+  /// 同一個資料夾裡已經有同名的就加編號（「原名 複製 2」…）。附件會一併複製成獨立的檔案，
+  /// 之後刪掉其中一則不會影響另一則。
+  Future<Note?> duplicateNote(Note src, String? folderId) async {
+    if (status != VaultStatus.unlocked) return null;
+    final base = src.displayTitle;
+    final taken = <String>{
+      for (final n in notes)
+        if (!n.isTrashed && n.folderId == folderId) n.title.trim(),
+    };
+    var title = '$base ${tr('複製')}';
+    var k = 2;
+    while (taken.contains(title)) {
+      title = '$base ${tr('複製')} $k';
+      k++;
+    }
+    final newImages = <String>[];
+    for (final id in src.imageIds) {
+      final bytes = await loadImage(id);
+      if (bytes == null) continue;
+      if (isMediaId(id)) {
+        final parts = id.split('-');
+        newImages.add(await addMedia(
+          bytes,
+          video: id.startsWith('vid-'),
+          ext: parts.length > 2 ? parts[1] : '',
+        ));
+      } else {
+        newImages.add(await addImage(bytes));
+      }
+    }
+    final now = DateTime.now();
+    final copy = Note(
+      id: _uuid.v4(),
+      type: src.type,
+      title: title,
+      body: src.body,
+      site: src.site,
+      credentials: [for (final c in src.credentials) Credential(username: c.username, password: c.password)],
+      fields: [for (final f in src.fields) CustomField(label: f.label, value: f.value, secret: f.secret)],
+      tags: List<String>.of(src.tags),
+      folderId: folderId,
+      pinned: false,
+      color: src.color,
+      locked: src.locked,
+      imageIds: newImages,
+      createdAt: now,
+      updatedAt: now,
+    );
+    notes.add(copy);
+    notifyListeners();
+    _persist();
+    return copy;
+  }
+
   void moveToTrash(String id) {
     final n = byId(id);
     if (n == null) return;
