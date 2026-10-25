@@ -12,6 +12,12 @@ jobs:
     permissions:
       contents: write
     steps:
+      - name: Free disk space
+        run: |
+          df -h /
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/share/boost /opt/hostedtoolcache/CodeQL /usr/local/.ghcup || true
+          df -h /
+
       - uses: actions/checkout@v4
 
       - uses: actions/setup-java@v4
@@ -22,7 +28,7 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
-          cache: true
+          cache: false
 
       - name: Generate Android scaffold and apply patches
         run: |
@@ -40,7 +46,7 @@ jobs:
         continue-on-error: true
 
       - name: Build release APK
-        run: flutter build apk --release
+        run: flutter build apk --release --target-platform android-arm64
 
       - name: Sign APK
         env:
