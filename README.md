@@ -42,6 +42,7 @@ Encrypted notes and password manager for Android and Windows, built with Flutter
 
 | Version | Highlights / 重點 |
 |---|---|
+| 2.6.3 | Smaller Android APK (arm64 only), build disk-space fix / Android 安裝檔縮小（僅 arm64）、修正建置空間不足 |
 | 2.6.2 | Centered in-note search matches, long-press menu on the home screen, copy note to folder / 筆記內搜尋置中、首頁長按選單、複製記事本到資料夾 |
 | 2.5.1 | AI recognition (PaddleOCR) for image to text on Windows and Android / 圖片轉文字新增 AI 辨識（PaddleOCR），Windows 與 Android 皆支援 |
 | 2.3.1 | Image to text (camera / photo / Windows screenshot, crop, layout-preserving, select text on the image) / 圖片轉文字（拍照、選圖、Windows 截圖、框選範圍、保留排列、在圖上選取文字） |

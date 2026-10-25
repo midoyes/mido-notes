@@ -1,5 +1,15 @@
 # 更新紀錄
 
+## 2.6.3
+改進：
+- Android 安裝檔只包含 64 位元 ARM（arm64-v8a，現今手機皆適用），檔案大小約縮小一半；文字辨識（含 AI 辨識）與所有功能不變。
+- 修正 GitHub Actions 建置結尾偶爾出現「No space left on device」造成紅色 X 的問題（建置前先釋放磁碟空間、不再快取 Flutter），APK 不再因此顯示錯誤。
+
+English:
+Improvements:
+- The Android APK now includes only 64-bit ARM (arm64-v8a, used by current phones), roughly halving its size; text recognition (including AI recognition) and all features are unchanged.
+- Fixed the GitHub Actions build occasionally ending with "No space left on device" and a red X (frees disk space before building and no longer caches Flutter), so the APK build no longer shows an error.
+
 ## 2.6.2
 新功能：
 - 筆記內搜尋：按「上一個／下一個」跳到每個吻合的關鍵字時，會捲到畫面正中央並以深色標示；從首頁搜尋點進記事本，第一個吻合處也置中。Windows 與 Android 都適用。

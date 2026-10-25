@@ -9,6 +9,11 @@ class ChangelogEntry {
 
 const List<ChangelogEntry> kChangelog = <ChangelogEntry>[
   ChangelogEntry(
+    '2.6.3',
+    ['Android 安裝檔只包含 64 位元 ARM，檔案大小約縮小一半，辨識與功能不變。', '修正建置結尾「磁碟空間不足」造成的紅色 X。'],
+    ['The Android APK now includes only 64-bit ARM, roughly halving its size; recognition and features unchanged.', 'Fixed the build ending with a "no space left" red X.'],
+  ),
+  ChangelogEntry(
     '2.6.2',
     [
       '筆記內搜尋跳到每個吻合的關鍵字時，都會置中並以深色標示；從首頁搜尋點進記事本，第一個吻合處也置中。',

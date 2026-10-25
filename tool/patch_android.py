@@ -272,3 +272,37 @@ def fetch_ai_models() -> bool:
 
 
 fetch_ai_models()
+
+# 9. 只打包 arm64-v8a（現在的手機幾乎都是 64 位元 ARM）。
+#    其他架構（armeabi-v7a、x86、x86_64）的 Flutter 引擎、ML Kit、ONNX Runtime 函式庫全部不放，
+#    安裝檔大約縮小一半，辨識模型與功能完全不變。
+ABI_KTS = '''
+// --- Mido筆記：只包含 arm64-v8a ---
+android {
+    defaultConfig {
+        ndk {
+            abiFilters.clear()
+            abiFilters.add("arm64-v8a")
+        }
+    }
+}
+'''
+ABI_GROOVY = '''
+// --- Mido筆記：只包含 arm64-v8a ---
+android {
+    defaultConfig {
+        ndk {
+            abiFilters.clear()
+            abiFilters.add('arm64-v8a')
+        }
+    }
+}
+'''
+for name, snippet in (("build.gradle.kts", ABI_KTS), ("build.gradle", ABI_GROOVY)):
+    app_gradle = ANDROID / "app" / name
+    if app_gradle.exists():
+        text = app_gradle.read_text(encoding="utf-8")
+        if "只包含 arm64-v8a" not in text:
+            app_gradle.write_text(text + snippet, encoding="utf-8")
+        print(f"abiFilters arm64-v8a -> {app_gradle.relative_to(ROOT)}")
+        break
