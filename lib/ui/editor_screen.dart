@@ -343,11 +343,27 @@ class _EditorScreenState extends State<EditorScreen> with WidgetsBindingObserver
   }
 
   /// 右上角「儲存」：立刻存檔並回到列表。
-  void _saveAndClose() {
+  Future<void> _saveAndClose() async {
     _debounce?.cancel();
     _dirty = true;
     _save();
     final saved = _inStore;
+    await vault.flush(); // 等加密寫入真的完成
+    if (!mounted) return;
+    if (vault.lastSaveError != null) {
+      _dirty = true; // 失敗：留在編輯畫面，之後仍可重試
+      await showDialog<void>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text(tr('儲存失敗')),
+          content: Text(tr('資料沒有寫入成功（可能是儲存空間不足）。請先清出空間，再按一次「儲存」。\n\n${vault.lastSaveError}')),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: Text(tr('確定'))),
+          ],
+        ),
+      );
+      return;
+    }
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(

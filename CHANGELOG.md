@@ -1,5 +1,19 @@
 # 更新紀錄
 
+## 2.6.4
+資料安全與穩定性修正：
+- 修正還原備份／匯入密碼 CSV 後，可能把你選的原始檔一起刪掉的問題（Windows 上選檔回傳的是原檔）。現在只清除 App 自己產生的暫存複本；CSV 也改成匯入結束後才清暫存，不再於確認前就刪。
+- 按「儲存」會等加密寫入真正完成才顯示「已儲存」；若寫入失敗（例如空間不足），會留在編輯畫面並顯示錯誤，可清出空間後重試。
+- 建立備份時，若有圖片或錄音讀取失敗，會明確警告有幾個附件沒放進備份，不再默默略過。
+- 鎖定筆記本時，立刻清除播放影音／辨識圖片所留下的解密暫存檔。
+
+English:
+Data safety and reliability fixes:
+- Fixed restoring a backup / importing a passwords CSV possibly deleting the file you picked (on Windows the picker returns the original file). Only the app's own temporary copies are removed now, and the CSV cleanup happens after the import finishes instead of before you confirm.
+- "Save" now waits until the encrypted write has really finished before saying "Saved"; if the write fails (e.g. storage full) you stay in the editor with an error and can retry.
+- Creating a backup now warns how many images / recordings could not be read and were left out, instead of skipping them silently.
+- Locking the vault immediately removes the decrypted temporary files left by media playback and OCR.
+
 ## 2.6.3
 改進：
 - Android 安裝檔只包含 64 位元 ARM（arm64-v8a，現今手機皆適用），檔案大小約縮小一半；文字辨識（含 AI 辨識）與所有功能不變。

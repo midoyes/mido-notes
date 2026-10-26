@@ -9,6 +9,21 @@ class ChangelogEntry {
 
 const List<ChangelogEntry> kChangelog = <ChangelogEntry>[
   ChangelogEntry(
+    '2.6.4',
+    [
+      '修正還原備份／匯入 CSV 可能刪到你選的原始檔的問題。',
+      '「儲存」等寫入真正完成才顯示已儲存，失敗會提示並可重試。',
+      '備份遇到讀不到的附件會警告，不再默默略過。',
+      '鎖定時立即清除解密暫存檔。',
+    ],
+    [
+      'Fixed restore / CSV import possibly deleting the file you picked.',
+      '"Save" now waits for the real write; failures are shown and can be retried.',
+      'Backups now warn about attachments that could not be read instead of skipping silently.',
+      'Locking immediately removes decrypted temporary files.',
+    ],
+  ),
+  ChangelogEntry(
     '2.6.3',
     ['Android 安裝檔只包含 64 位元 ARM，檔案大小約縮小一半，辨識與功能不變。', '修正建置結尾「磁碟空間不足」造成的紅色 X。'],
     ['The Android APK now includes only 64-bit ARM, roughly halving its size; recognition and features unchanged.', 'Fixed the build ending with a "no space left" red X.'],

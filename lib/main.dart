@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'app_state.dart';
+import 'data/vault_store.dart';
 import 'ui/home_screen.dart';
 import 'ui/lock_guard.dart';
 import 'ui/media_utils.dart';
@@ -45,6 +46,13 @@ Future<void> main() async {
   await vault.init();
   cleanOcrTemp();
   cleanMediaTemp(); // 清掉上次播放影片／錄音時留下的解密暫存檔
+  vault.addListener(() {
+    // 鎖定時也立刻清掉解密暫存檔，不必等到下次開啟
+    if (vault.status == VaultStatus.locked) {
+      cleanMediaTemp();
+      cleanOcrTemp();
+    }
+  });
   runApp(const MidoApp());
 }
 

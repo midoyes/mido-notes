@@ -100,6 +100,13 @@ class VaultStore extends ChangeNotifier {
   final List<Future<void> Function()> _beforeLock = <Future<void> Function()>[];
   Future<void> _saveChain = Future<void>.value();
 
+  /// 最近一次存檔失敗的錯誤（成功則為 null）；上次備份讀不到的附件數。
+  Object? lastSaveError;
+  int lastBackupMissing = 0;
+
+  /// 等待目前排隊中的存檔全部寫完。
+  Future<void> flush() => _saveChain;
+
   File get _headerFile => File('${_dir.path}/header.json');
   File get _vaultFile => File('${_dir.path}/vault.enc');
   File _imageFile(String id) => File('${_dir.path}/images/$id.enc');
@@ -808,13 +815,19 @@ class VaultStore extends ChangeNotifier {
   Future<Uint8List> buildBackup(String password) async {
     if (_dek == null) throw StateError('vault locked');
     final images = <String, String>{};
+    var missing = 0;
     for (final n in notes) {
       for (final id in n.imageIds) {
         if (images.containsKey(id)) continue;
         final b = await loadImage(id);
-        if (b != null) images[id] = base64Encode(b);
+        if (b != null) {
+          images[id] = base64Encode(b);
+        } else {
+          missing++;
+        }
       }
     }
+    lastBackupMissing = missing;
     final payload = jsonEncode({
       'v': 1,
       'app': 'mido_notes',
@@ -1181,7 +1194,9 @@ class VaultStore extends ChangeNotifier {
     _saveChain = _saveChain.then((_) async {
       final enc = await VaultCrypto.encrypt(utf8.encode(json), dek);
       await _atomicWrite(_vaultFile, enc);
+      lastSaveError = null;
     }).catchError((Object e) {
+      lastSaveError = e;
       debugPrint('save failed: $e');
     });
     return _saveChain;

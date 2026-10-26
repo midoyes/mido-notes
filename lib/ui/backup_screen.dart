@@ -221,6 +221,13 @@ class _BackupScreenState extends State<BackupScreen> {
     }
     _hideBusy();
     if (!mounted) return;
+    if (vault.lastBackupMissing > 0) {
+      await _info(
+        tr('部分附件沒有備份'),
+        tr('有 ${vault.lastBackupMissing} 個附件讀取失敗（可能已損毀或遺失），沒有放進這份備份。請先檢查那些筆記的圖片／錄音。'),
+      );
+      if (!mounted) return;
+    }
 
     if (_desktop) {
       try {
@@ -330,11 +337,7 @@ class _BackupScreenState extends State<BackupScreen> {
         final s =
             await vault.restoreBackup(bytes, pw, replace: mode == 'replace');
         _hideBusy();
-        if (cleanupPath != null) {
-          try {
-            await File(cleanupPath).delete(); // 刪掉選檔時產生的暫存複本
-          } catch (_) {}
-        }
+        await _deleteIfPickerCopy(cleanupPath);
         if (!mounted) return;
         await _info(
           tr('還原完成'),
@@ -363,7 +366,31 @@ class _BackupScreenState extends State<BackupScreen> {
 
   // ───────────────────────── 匯入 CSV ─────────────────────────
 
+  String? _pickedCsvPath;
+
   Future<void> _importCsv() async {
+    try {
+      await _importCsvCore();
+    } finally {
+      await _deleteIfPickerCopy(_pickedCsvPath); // 內含明文密碼的暫存複本
+      _pickedCsvPath = null;
+    }
+  }
+
+  /// 只刪除檔案選擇器在 App 暫存區產生的複本；絕不刪使用者自己的原始檔
+  /// （桌面版選擇器回傳的是原檔路徑，不是複本）。
+  Future<void> _deleteIfPickerCopy(String? path) async {
+    if (path == null || _desktop) return;
+    try {
+      final t = (await getTemporaryDirectory()).path;
+      final sep = Platform.pathSeparator;
+      final root = t.endsWith(sep) ? t : '$t$sep';
+      if (!path.startsWith(root)) return;
+      await File(path).delete();
+    } catch (_) {}
+  }
+
+  Future<void> _importCsvCore() async {
     final go = await confirmDialog(
       context,
       title: tr('匯入 Chrome / Google 密碼'),
@@ -385,12 +412,7 @@ class _BackupScreenState extends State<BackupScreen> {
     }
 
     final parsed = parseLoginCsv(utf8.decode(bytes, allowMalformed: true));
-    final p = f.path;
-    if (p != null) {
-      try {
-        await File(p).delete(); // 刪掉選檔時產生的暫存複本（內含明文密碼）
-      } catch (_) {}
-    }
+    _pickedCsvPath = f.path; // 匯入結束後才清（見 _importCsv）
     if (parsed == null) {
       if (mounted) {
         await _info(tr('看不出是密碼檔'), tr('這個檔案不像帳號密碼的 CSV（需要有 password 欄位）。'));
