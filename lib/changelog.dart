@@ -9,6 +9,21 @@ class ChangelogEntry {
 
 const List<ChangelogEntry> kChangelog = <ChangelogEntry>[
   ChangelogEntry(
+    '2.6.5',
+    [
+      '附件改成資料庫寫入成功後才刪除，寫入失敗不會讓附件消失。',
+      '返回鍵離開筆記時若存檔失敗，會提示並可重試。',
+      '還原備份區分「密碼錯誤」與「寫入失敗」，失敗不再顯示成功。',
+      '自動鎖定前會重試失敗的存檔；無主密碼模式也會清除解密暫存檔。',
+    ],
+    [
+      'Attachments are deleted only after the database write succeeds.',
+      'Leaving a note with Back shows an error and Retry if saving fails.',
+      'Restore distinguishes wrong password from write failure; failures are never reported as success.',
+      'Auto-lock retries a failed save first; no-password mode also clears decrypted temp files.',
+    ],
+  ),
+  ChangelogEntry(
     '2.6.4',
     [
       '修正還原備份／匯入 CSV 可能刪到你選的原始檔的問題。',

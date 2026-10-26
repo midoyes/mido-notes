@@ -1523,7 +1523,20 @@ class _EditorScreenState extends State<EditorScreen> with WidgetsBindingObserver
       canPop: true,
       onPopInvokedWithResult: (didPop, result) {
         _debounce?.cancel();
+        final messenger = ScaffoldMessenger.maybeOf(context);
         _save();
+        vault.flush().then((_) {
+          if (vault.lastSaveError != null) {
+            messenger?.showSnackBar(SnackBar(
+              content: Text(tr('儲存失敗（可能空間不足），內容尚未寫入。')),
+              duration: const Duration(seconds: 8),
+              action: SnackBarAction(
+                label: tr('重試'),
+                onPressed: () => vault.retrySave(),
+              ),
+            ));
+          }
+        });
       },
       child: Scaffold(
         appBar: AppBar(

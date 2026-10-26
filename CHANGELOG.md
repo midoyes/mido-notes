@@ -1,5 +1,21 @@
 # 更新紀錄
 
+## 2.6.5
+資料完整性修正：
+- 刪除附件（刪圖片／錄音、永久刪除、清空回收桶、取代全部還原）改成「資料庫成功寫入後才真正刪檔」，寫入失敗時附件不會先消失。
+- 用返回鍵／返回手勢離開筆記時，若寫入失敗會跳出提示並可按「重試」，不再默默失敗。
+- 還原備份時，把「密碼錯誤」與「寫入失敗（例如空間不足）」分開處理；寫入失敗不會再被誤認為密碼錯誤，也不會顯示還原成功。
+- 自動鎖定前若上次存檔失敗，會先再試一次，避免未存的內容被清掉。
+- 無主密碼模式下，進入背景／鎖定流程時也會清除解密暫存檔。
+
+English:
+Data integrity fixes:
+- Attachment deletion (removing an image / recording, permanent delete, emptying the trash, replace-all restore) now removes the file only after the database has been written successfully, so a failed write never loses attachments.
+- Leaving a note with the Back key / gesture now shows an error with a Retry button if the write fails, instead of failing silently.
+- Restore now separates "wrong password" from "write failed (e.g. storage full)": a write failure is no longer mistaken for a wrong password and is never reported as success.
+- Auto-lock retries a previously failed save before clearing memory, so unsaved content is not discarded.
+- In no-master-password mode, decrypted temporary files are also cleared on the lock/background step.
+
 ## 2.6.4
 資料安全與穩定性修正：
 - 修正還原備份／匯入密碼 CSV 後，可能把你選的原始檔一起刪掉的問題（Windows 上選檔回傳的是原檔）。現在只清除 App 自己產生的暫存複本；CSV 也改成匯入結束後才清暫存，不再於確認前就刪。

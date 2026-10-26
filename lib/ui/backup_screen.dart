@@ -350,6 +350,15 @@ class _BackupScreenState extends State<BackupScreen> {
         _hideBusy();
         if (mounted) await _info(tr('無法還原'), e.message);
         return;
+      } on RestoreWriteException catch (e) {
+        _hideBusy();
+        if (mounted) {
+          await _info(
+            tr('還原失敗'),
+            tr('備份密碼正確，但寫入這支裝置時失敗（可能是儲存空間不足）。請清出空間後再試。\n\n${e.cause}'),
+          );
+        }
+        return;
       } catch (_) {
         _hideBusy();
         attempt++;

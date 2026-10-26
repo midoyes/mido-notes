@@ -17,6 +17,14 @@ import '../i18n.dart';
 
 enum VaultStatus { loading, needsSetup, locked, unlocked }
 
+/// 備份已驗證通過（密碼正確），但寫入本機時失敗（例如空間不足）。
+class RestoreWriteException implements Exception {
+  RestoreWriteException(this.cause);
+  final Object cause;
+  @override
+  String toString() => '$cause';
+}
+
 /// 還原備份後的統計。
 class BackupSummary {
   const BackupSummary({
@@ -106,6 +114,9 @@ class VaultStore extends ChangeNotifier {
 
   /// 等待目前排隊中的存檔全部寫完。
   Future<void> flush() => _saveChain;
+
+  /// 重新嘗試存檔（儲存失敗後使用）。
+  Future<void> retrySave() => _persist();
 
   File get _headerFile => File('${_dir.path}/header.json');
   File get _vaultFile => File('${_dir.path}/vault.enc');
@@ -417,6 +428,9 @@ class VaultStore extends ChangeNotifier {
       } catch (_) {}
     }
     await _saveChain;
+    if (lastSaveError != null) {
+      await _persist(); // 上次存檔失敗：鎖定前再試一次，免得未存的內容被清掉
+    }
     if (noPassword) return; // 無密碼模式不鎖定
     _dek = null;
     _lockHash = null;
@@ -782,12 +796,27 @@ class VaultStore extends ChangeNotifier {
     _imageCache[id] = bytes;
   }
 
+  /// 要刪除的附件先登記，等「資料庫已成功寫入」後才真的刪檔，
+  /// 避免寫入失敗時附件已經不見。就算清理失敗，最多只留下孤立的加密檔。
+  final Set<String> _pendingImageDeletes = <String>{};
+
   Future<void> deleteImageFile(String id) async {
     _imageCache.remove(id);
-    try {
-      final f = _imageFile(id);
-      if (await f.exists()) await f.delete();
-    } catch (_) {}
+    _pendingImageDeletes.add(id);
+  }
+
+  Future<void> _flushPendingDeletes() async {
+    if (_pendingImageDeletes.isEmpty) return;
+    final inUse = <String>{for (final n in notes) ...n.imageIds};
+    final ids = List<String>.of(_pendingImageDeletes);
+    _pendingImageDeletes.clear();
+    for (final id in ids) {
+      if (inUse.contains(id)) continue; // 仍被引用就不能刪
+      try {
+        final f = _imageFile(id);
+        if (await f.exists()) await f.delete();
+      } catch (_) {}
+    }
   }
 
   // ───────────────────────── 標籤 ─────────────────────────
@@ -953,8 +982,15 @@ class VaultStore extends ChangeNotifier {
     required bool replace,
   }) async {
     if (_dek == null) throw StateError('vault locked');
-    final map = await _openBackup(data, password);
-    return _applyBackup(map, replace: replace);
+    final map = await _openBackup(data, password); // 密碼錯誤／檔案損毀會在這裡丟出
+    try {
+      final s = await _applyBackup(map, replace: replace);
+      await _saveChain;
+      if (lastSaveError != null) throw lastSaveError!;
+      return s;
+    } catch (e) {
+      throw RestoreWriteException(e);
+    }
   }
 
   Future<BackupSummary> _applyBackup(
@@ -1195,6 +1231,7 @@ class VaultStore extends ChangeNotifier {
       final enc = await VaultCrypto.encrypt(utf8.encode(json), dek);
       await _atomicWrite(_vaultFile, enc);
       lastSaveError = null;
+      await _flushPendingDeletes();
     }).catchError((Object e) {
       lastSaveError = e;
       debugPrint('save failed: $e');

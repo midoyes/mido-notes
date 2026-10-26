@@ -42,6 +42,7 @@ Encrypted notes and password manager for Android and Windows, built with Flutter
 
 | Version | Highlights / 重點 |
 |---|---|
+| 2.6.5 | Data-integrity fixes: safer attachment deletion, save-failure retry, clearer restore errors / 資料完整性修正：附件延後刪除、存檔失敗可重試、還原錯誤分辨 |
 | 2.6.4 | Data-safety fixes: no more deleting picked files, reliable save, backup attachment warning / 資料安全修正：不再誤刪選取的檔案、儲存更可靠、備份附件警告 |
 | 2.6.3 | Smaller Android APK (arm64 only), build disk-space fix / Android 安裝檔縮小（僅 arm64）、修正建置空間不足 |
 | 2.6.2 | Centered in-note search matches, long-press menu on the home screen, copy note to folder / 筆記內搜尋置中、首頁長按選單、複製記事本到資料夾 |
