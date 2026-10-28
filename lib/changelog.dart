@@ -9,6 +9,11 @@ class ChangelogEntry {
 
 const List<ChangelogEntry> kChangelog = <ChangelogEntry>[
   ChangelogEntry(
+    '2.7.1',
+    ['修正 Windows 視窗較寬時，首頁格狀顯示的記事本卡片過大的問題（手機不受影響）。'],
+    ['Fixed oversized note cards in the home grid view on wide Windows windows (phones unchanged).'],
+  ),
+  ChangelogEntry(
     '2.7.0',
     [
       '新增雲端同步（Google 雲端硬碟）：在多台裝置間自動同步筆記，設定 → 雲端同步登入即可。',

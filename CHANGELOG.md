@@ -1,5 +1,13 @@
 # 更新紀錄
 
+## 2.7.1
+修正：
+- Windows（視窗較寬時）首頁「格狀」顯示的記事本卡片過大：視窗寬度超過 600 時，改為固定卡片大小、依視窗寬度自動增加欄數。手機畫面不受影響。
+
+English:
+Fixes:
+- On Windows (wide windows) the grid view on the home screen showed oversized note cards. When the window is wider than 600, cards now keep a fixed size and the number of columns grows with the window width. Phone layouts are unchanged.
+
 ## 2.7.0
 新功能：
 - 雲端同步（Google 雲端硬碟）：在多台裝置之間自動同步筆記。到「設定 → 雲端同步」登入自己的 Google 帳號並設定同步密碼，兩台裝置用相同的 Google 帳號與同步密碼即可。開啟 App、解鎖、切回 App 時自動拉取，儲存後自動上傳，也可手動「立即同步」。

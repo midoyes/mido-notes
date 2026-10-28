@@ -1066,17 +1066,33 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _grid(List<Note> notes) {
     final cols = appSettings.gridColumns;
-    return GridView.builder(
-      controller: _scroll,
-      padding: const EdgeInsets.fromLTRB(12, 4, 12, 88),
-      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: cols,
-        mainAxisSpacing: 10,
-        crossAxisSpacing: 10,
-        childAspectRatio: cols >= 3 ? 0.8 : 1.0,
-      ),
-      itemCount: notes.length,
-      itemBuilder: (_, i) => _card(notes, i, true),
+    return LayoutBuilder(
+      builder: (context, box) {
+        // 視窗寬（Windows 桌面、平板）時，固定欄數會讓每張卡片變得巨大；
+        // 寬度超過 600 就改成「卡片大小固定、欄數自動增加」。手機維持原本的 2 / 3 欄。
+        final wide = box.maxWidth > 600;
+        final ratio = cols >= 3 ? 0.8 : 1.0;
+        final SliverGridDelegate delegate = wide
+            ? SliverGridDelegateWithMaxCrossAxisExtent(
+                maxCrossAxisExtent: cols >= 3 ? 200 : 260,
+                mainAxisSpacing: 10,
+                crossAxisSpacing: 10,
+                childAspectRatio: ratio,
+              )
+            : SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: cols,
+                mainAxisSpacing: 10,
+                crossAxisSpacing: 10,
+                childAspectRatio: ratio,
+              );
+        return GridView.builder(
+          controller: _scroll,
+          padding: const EdgeInsets.fromLTRB(12, 4, 12, 88),
+          gridDelegate: delegate,
+          itemCount: notes.length,
+          itemBuilder: (_, i) => _card(notes, i, true),
+        );
+      },
     );
   }
 
