@@ -46,7 +46,7 @@ jobs:
         continue-on-error: true
 
       - name: Build release APK
-        run: flutter build apk --release --target-platform android-arm64
+        run: flutter build apk --release --target-platform android-arm64 --dart-define=GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}
 
       - name: Sign APK
         env:
@@ -70,12 +70,6 @@ jobs:
           else
             echo "::warning::沒有設定簽章 secrets，這個 APK 使用除錯簽章，之後換簽章需要先解除安裝舊版。"
           fi
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: Mido-notes-apk
-          path: Mido-notes.apk
-          retention-days: 30
 
       - name: Publish to GitHub Release
         env:
