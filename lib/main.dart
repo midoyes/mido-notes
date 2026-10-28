@@ -11,6 +11,7 @@ import 'ui/lock_guard.dart';
 import 'ui/media_utils.dart';
 import 'ocr.dart';
 import 'i18n.dart';
+import 'sync/sync_service.dart';
 
 /// 把錯誤寫到桌面的 mido_error.log，方便回報問題（只記錄錯誤，不含筆記內容）。
 void _logError(Object error, StackTrace? stack) {
@@ -45,6 +46,7 @@ Future<void> main() async {
   await vault.init();
   cleanOcrTemp();
   cleanMediaTemp(); // 清掉上次播放影片／錄音時留下的解密暫存檔
+  syncService.init();
   // 每次鎖定（含無主密碼模式）都立刻清掉解密暫存檔，不必等到下次開啟
   vault.addBeforeLock(() async {
     await cleanMediaTemp();

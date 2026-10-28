@@ -11,6 +11,7 @@ import 'backup_screen.dart';
 import 'changelog_screen.dart';
 import 'common.dart';
 import 'security_check_screen.dart';
+import 'sync_screen.dart';
 import '../i18n.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -568,6 +569,20 @@ class SettingsScreen extends StatelessWidget {
                 ),
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute<void>(builder: (_) => const BackupScreen()),
+                ),
+              ),
+              ListTile(
+                leading: const Icon(Icons.cloud_sync_outlined),
+                title: Text(tr('雲端同步（Google 雲端硬碟）')),
+                subtitle: Text(
+                  !appSettings.syncEnabled
+                      ? tr('尚未開啟；可在多台裝置間自動同步')
+                      : (appSettings.lastSyncAt == null
+                          ? tr('已開啟')
+                          : tr('上次同步：${fmtDate(appSettings.lastSyncAt!, full: true)}')),
+                ),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(builder: (_) => const SyncScreen()),
                 ),
               ),
               ListTile(

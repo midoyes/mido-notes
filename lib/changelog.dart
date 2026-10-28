@@ -9,6 +9,19 @@ class ChangelogEntry {
 
 const List<ChangelogEntry> kChangelog = <ChangelogEntry>[
   ChangelogEntry(
+    '2.7.0',
+    [
+      '新增雲端同步（Google 雲端硬碟）：在多台裝置間自動同步筆記，設定 → 雲端同步登入即可。',
+      '同步檔在本機用同步密碼加密後才上傳，只存在 App 專用的隱藏資料夾；預設關閉。',
+      '每則筆記以修改時間較新的為準，刪除也會同步。',
+    ],
+    [
+      'New cloud sync (Google Drive): sync notes automatically between devices — sign in under Settings → Cloud sync.',
+      'The sync file is encrypted on your device with the sync password before upload and stored only in the app\'s hidden data folder; off by default.',
+      'The newer edit of each note wins; deletions are synced too.',
+    ],
+  ),
+  ChangelogEntry(
     '2.6.5',
     [
       '附件改成資料庫寫入成功後才刪除，寫入失敗不會讓附件消失。',

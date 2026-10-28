@@ -42,6 +42,7 @@ Encrypted notes and password manager for Android and Windows, built with Flutter
 
 | Version | Highlights / 重點 |
 |---|---|
+| 2.7.0 | Cloud sync via your own Google Drive (encrypted, optional) / 雲端同步：用自己的 Google 雲端硬碟在多台裝置間同步（加密、選用） |
 | 2.6.5 | Data-integrity fixes: safer attachment deletion, save-failure retry, clearer restore errors / 資料完整性修正：附件延後刪除、存檔失敗可重試、還原錯誤分辨 |
 | 2.6.4 | Data-safety fixes: no more deleting picked files, reliable save, backup attachment warning / 資料安全修正：不再誤刪選取的檔案、儲存更可靠、備份附件警告 |
 | 2.6.3 | Smaller Android APK (arm64 only), build disk-space fix / Android 安裝檔縮小（僅 arm64）、修正建置空間不足 |
@@ -74,8 +75,10 @@ Full history: [CHANGELOG.md](CHANGELOG.md) or **Settings → About → Version h
 
 ## Privacy / 隱私
 
-No accounts, no analytics, no ads, no cloud sync. Backups are files you export yourself.
-沒有帳號、沒有統計分析、沒有廣告、沒有雲端同步。備份是你自己匯出的檔案。
+No accounts of our own, no analytics, no ads, no servers. Backups are files you export yourself.
+Optional cloud sync (off by default) uses **your own Google Drive** and only the app's hidden data folder (`drive.appdata`); the file is encrypted on your device with a sync password before upload. See [PRIVACY.md](PRIVACY.md).
+沒有自己的帳號系統、沒有統計分析、沒有廣告、沒有伺服器。備份是你自己匯出的檔案。
+選用的雲端同步（預設關閉）使用**你自己的 Google 雲端硬碟**，只存取 App 專用隱藏資料夾（`drive.appdata`），檔案在你的裝置上用同步密碼加密後才上傳。詳見 [PRIVACY.md](PRIVACY.md)。
 
 ---
 
@@ -105,6 +108,8 @@ Security issues: please open a private report or an Issue without publishing sen
    Keep the key file safe and never commit it.
    （建議）自行建立 Android 簽署金鑰，並在 **Settings → Secrets and variables → Actions** 新增四個 Secrets：`KEYSTORE_BASE64`、`KEYSTORE_PASSWORD`、`KEY_ALIAS`、`KEY_PASSWORD`。
    沒設定的話 APK 會用臨時金鑰簽署，之後的版本就無法覆蓋安裝。金鑰檔請妥善保管，切勿上傳到 repo。
+   (Optional, cloud sync) Google sign-in works only with this project's official Release builds. If you build your own copy, create your own Google Cloud OAuth clients and add the Actions secret `GOOGLE_CLIENT_SECRET` (and change the client ID in `lib/sync/google_config.dart`); otherwise leave cloud sync unused.
+   （選用，雲端同步）Google 登入只適用於本專案官方 Release。自行編譯的版本需建立自己的 Google Cloud OAuth 用戶端、新增 Actions secret `GOOGLE_CLIENT_SECRET`，並修改 `lib/sync/google_config.dart` 的 Client ID；不需要同步就不用管。
 3. Run the **Build APK** / **Build Windows** workflows (Actions tab) or push to `main` **of your own fork**.
    Each run publishes a GitHub Release tagged `v<version in pubspec.yaml>`.
    在 Actions 頁籤執行 **Build APK**／**Build Windows**，或推送到**你自己 fork 的** `main`。每次執行都會發佈一個標籤為 `v<pubspec.yaml 的版本>` 的 GitHub Release。

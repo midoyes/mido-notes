@@ -1,5 +1,17 @@
 # 更新紀錄
 
+## 2.7.0
+新功能：
+- 雲端同步（Google 雲端硬碟）：在多台裝置之間自動同步筆記。到「設定 → 雲端同步」登入自己的 Google 帳號並設定同步密碼，兩台裝置用相同的 Google 帳號與同步密碼即可。開啟 App、解鎖、切回 App 時自動拉取，儲存後自動上傳，也可手動「立即同步」。
+- 雲端檔案在本機用同步密碼加密後才上傳，存在 App 專用的隱藏資料夾，App 看不到雲端硬碟裡其他檔案；預設關閉。
+- 合併規則同備份還原的「合併」：每則筆記以修改時間較新的為準，刪除也會同步。
+
+English:
+New feature:
+- Cloud sync (Google Drive): sync notes automatically between devices. Go to Settings → Cloud sync, sign in with your own Google account and set a sync password; use the same Google account and sync password on both devices. It pulls when the app opens, unlocks or returns to the foreground, uploads automatically after saving, and can be run manually with "Sync now".
+- The cloud file is encrypted on your device with the sync password before upload and stored in the app's hidden data folder; the app cannot see any other file in your Drive. Off by default.
+- Merging follows the backup-restore "merge" rules: the newer edit of each note wins, and deletions are synced too.
+
 ## 2.6.5
 資料完整性修正：
 - 刪除附件（刪圖片／錄音、永久刪除、清空回收桶、取代全部還原）改成「資料庫成功寫入後才真正刪檔」，寫入失敗時附件不會先消失。

@@ -29,6 +29,11 @@ class AppSettings extends ChangeNotifier {
   int backupRemindDays = 14; // 0 = 不提醒
   DateTime? remindSnoozedUntil;
 
+  // 雲端同步（Google 雲端硬碟）
+  bool syncEnabled = false;
+  DateTime? lastSyncAt;
+  String? syncRemoteMd5; // 上次看到的雲端檔指紋（沒變就不用重新下載）
+  String? syncUploadedChange; // 上次同步時，本機最近一次資料變更的時間
 
   File? _file;
 
@@ -62,6 +67,10 @@ class AppSettings extends ChangeNotifier {
         backupRemindDays = (j['backupRemindDays'] as int?) ?? 14;
         remindSnoozedUntil =
             DateTime.tryParse((j['remindSnoozedUntil'] as String?) ?? '');
+        syncEnabled = (j['syncEnabled'] as bool?) ?? false;
+        lastSyncAt = DateTime.tryParse((j['lastSyncAt'] as String?) ?? '');
+        syncRemoteMd5 = j['syncRemoteMd5'] as String?;
+        syncUploadedChange = j['syncUploadedChange'] as String?;
       }
     } catch (e) {
       debugPrint('load settings failed: $e');
@@ -97,6 +106,10 @@ class AppSettings extends ChangeNotifier {
         'lastBackupAt': lastBackupAt?.toIso8601String(),
         'backupRemindDays': backupRemindDays,
         'remindSnoozedUntil': remindSnoozedUntil?.toIso8601String(),
+        'syncEnabled': syncEnabled,
+        'lastSyncAt': lastSyncAt?.toIso8601String(),
+        'syncRemoteMd5': syncRemoteMd5,
+        'syncUploadedChange': syncUploadedChange,
       }));
       await tmp.rename(f.path);
     } catch (e) {
@@ -177,6 +190,26 @@ class AppSettings extends ChangeNotifier {
   Future<void> setBackupRemindDays(int d) async {
     backupRemindDays = d;
     remindSnoozedUntil = null;
+    notifyListeners();
+    await _save();
+  }
+
+  Future<void> setSyncState({
+    bool? enabled,
+    DateTime? lastSyncAt,
+    String? remoteMd5,
+    String? uploadedChange,
+    bool clearState = false,
+  }) async {
+    if (clearState) {
+      this.lastSyncAt = null;
+      syncRemoteMd5 = null;
+      syncUploadedChange = null;
+    }
+    if (enabled != null) syncEnabled = enabled;
+    if (lastSyncAt != null) this.lastSyncAt = lastSyncAt;
+    if (remoteMd5 != null) syncRemoteMd5 = remoteMd5;
+    if (uploadedChange != null) syncUploadedChange = uploadedChange;
     notifyListeners();
     await _save();
   }
