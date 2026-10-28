@@ -36,7 +36,7 @@ jobs:
         run: flutter pub get
 
       - name: Build Windows release
-        run: flutter build windows --release
+        run: flutter build windows --release --dart-define=GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}
 
       - name: Package
         run: |
@@ -47,12 +47,6 @@ jobs:
           mkdir -p dist
           powershell -NoProfile -Command "Compress-Archive -Path '$OUT/*' -DestinationPath 'dist/Mido-notes-windows.zip'"
           ls -la dist
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: Mido-notes-windows
-          path: dist/Mido-notes-windows.zip
-          if-no-files-found: error
 
       - name: Publish to GitHub Release
         env:
