@@ -9,6 +9,23 @@ class ChangelogEntry {
 
 const List<ChangelogEntry> kChangelog = <ChangelogEntry>[
   ChangelogEntry(
+    '2.7.2',
+    [
+      '同步：附件讀取失敗時取消上傳，不再用不完整的備份覆蓋雲端資料。',
+      '同步：上傳前再確認雲端沒有被其他裝置更新，降低互相覆蓋。',
+      '同步：資料夾新增與改名也會同步。',
+      '鎖定時若還寫不進磁碟，未存內容會加密保留並在下次解鎖補存。',
+      '還原／同步時檢查附件代號格式。',
+    ],
+    [
+      'Sync: cancel the upload when an attachment cannot be read, instead of overwriting the cloud with an incomplete backup.',
+      'Sync: re-check the cloud before uploading to reduce overwrites between devices.',
+      'Sync: folder creation and renames now sync too.',
+      'If saving still fails at lock time, unsaved content is kept encrypted and saved on the next unlock.',
+      'Restore / sync now validates attachment IDs.',
+    ],
+  ),
+  ChangelogEntry(
     '2.7.1',
     ['修正 Windows 視窗較寬時，首頁格狀顯示的記事本卡片過大的問題（手機不受影響）。'],
     ['Fixed oversized note cards in the home grid view on wide Windows windows (phones unchanged).'],

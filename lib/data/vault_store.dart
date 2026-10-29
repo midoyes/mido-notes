@@ -120,7 +120,13 @@ class VaultStore extends ChangeNotifier {
 
   File get _headerFile => File('${_dir.path}/header.json');
   File get _vaultFile => File('${_dir.path}/vault.enc');
-  File _imageFile(String id) => File('${_dir.path}/images/$id.enc');
+  static final RegExp _attachmentId = RegExp(r'^[A-Za-z0-9-]{1,100}$');
+  static bool validAttachmentId(String id) => _attachmentId.hasMatch(id);
+
+  File _imageFile(String id) {
+    if (!validAttachmentId(id)) throw ArgumentError('bad attachment id');
+    return File('${_dir.path}/images/$id.enc');
+  }
 
   // ───────────────────────── 初始化 / 建立 / 解鎖 ─────────────────────────
 
@@ -414,9 +420,41 @@ class VaultStore extends ChangeNotifier {
     folders
       ..clear()
       ..addAll(loadedFolders);
+    var recovered = false;
+    final snap = _unsavedSnapshot;
+    if (snap != null) {
+      _unsavedSnapshot = null;
+      try {
+        // 上次鎖定時沒能寫進磁碟的內容比磁碟上的新，直接取代並重新存檔。
+        final m = jsonDecode(utf8.decode(await VaultCrypto.decrypt(snap, dek)))
+            as Map<String, dynamic>;
+        final sn = <Note>[
+          for (final e in (m['notes'] as List?) ?? const <dynamic>[])
+            Note.fromJson(e as Map<String, dynamic>),
+        ];
+        final sf = <Folder>[
+          for (final e in (m['folders'] as List?) ?? const <dynamic>[])
+            Folder.fromJson(e as Map<String, dynamic>),
+        ];
+        notes
+          ..clear()
+          ..addAll(sn);
+        folders
+          ..clear()
+          ..addAll(sf);
+        tombstones
+          ..clear()
+          ..addAll(_readTomb(m['tomb']));
+        folderTombstones
+          ..clear()
+          ..addAll(_readTomb(m['ftomb']));
+        recovered = true;
+      } catch (_) {}
+    }
     _purgeOldTrash();
     status = VaultStatus.unlocked;
     notifyListeners();
+    if (recovered) unawaited(_persist());
   }
 
   /// 鎖定前會先呼叫已註冊的 hook（例如編輯中的筆記先存檔）。
@@ -432,6 +470,16 @@ class VaultStore extends ChangeNotifier {
       await _persist(); // 上次存檔失敗：鎖定前再試一次，免得未存的內容被清掉
     }
     if (noPassword) return; // 無密碼模式不鎖定
+    if (lastSaveError != null) {
+      // 還是寫不進磁碟：把尚未存下的內容加密留在記憶體，下次解鎖時再寫一次，避免鎖定時遺失。
+      final dek = _dek;
+      if (dek != null) {
+        try {
+          _unsavedSnapshot =
+              await VaultCrypto.encrypt(utf8.encode(_snapshotJson()), dek);
+        } catch (_) {}
+      }
+    }
     _dek = null;
     _lockHash = null;
     _lockSalt = null;
@@ -718,7 +766,7 @@ class VaultStore extends ChangeNotifier {
   }
 
   Folder addFolder(String name) {
-    final f = Folder(id: _uuid.v4(), name: name.trim());
+    final f = Folder(id: _uuid.v4(), name: name.trim(), updatedAt: DateTime.now());
     folders.add(f);
     notifyListeners();
     _persist();
@@ -727,7 +775,10 @@ class VaultStore extends ChangeNotifier {
 
   void renameFolder(String id, String name) {
     for (final f in folders) {
-      if (f.id == id) f.name = name.trim();
+      if (f.id == id) {
+        f.name = name.trim();
+        f.updatedAt = DateTime.now();
+      }
     }
     notifyListeners();
     _persist();
@@ -799,6 +850,9 @@ class VaultStore extends ChangeNotifier {
   /// 要刪除的附件先登記，等「資料庫已成功寫入」後才真的刪檔，
   /// 避免寫入失敗時附件已經不見。就算清理失敗，最多只留下孤立的加密檔。
   final Set<String> _pendingImageDeletes = <String>{};
+
+  /// 鎖定時仍存檔失敗的內容（已用資料金鑰加密，只存在記憶體）。
+  List<int>? _unsavedSnapshot;
 
   Future<void> deleteImageFile(String id) async {
     _imageCache.remove(id);
@@ -937,6 +991,9 @@ class VaultStore extends ChangeNotifier {
       see(n.updatedAt);
       see(n.deletedAt);
     }
+    for (final f in folders) {
+      see(f.updatedAt);
+    }
     tombstones.values.forEach(see);
     folderTombstones.values.forEach(see);
     return t;
@@ -1018,6 +1075,7 @@ class VaultStore extends ChangeNotifier {
     var imgCount = 0;
     for (final e in images.entries) {
       final id = e.key as String;
+      if (!validAttachmentId(id)) continue; // 不合法的附件代號（可能是特製備份），略過
       if (!replace && File(_imageFile(id).path).existsSync()) continue;
       final bytes = base64Decode(e.value as String);
       final enc = await VaultCrypto.encrypt(bytes, dek);
@@ -1079,7 +1137,13 @@ class VaultStore extends ChangeNotifier {
       for (final f in inFolders) {
         final t = folderTombstones[f.id];
         if (t != null) continue;
-        if (!folders.any((x) => x.id == f.id)) folders.add(f);
+        final cur = folders.indexWhere((x) => x.id == f.id);
+        if (cur < 0) {
+          folders.add(f);
+        } else if (f.updatedAt.isAfter(folders[cur].updatedAt)) {
+          folders[cur].name = f.name; // 其他裝置較晚改名
+          folders[cur].updatedAt = f.updatedAt;
+        }
       }
       folders.removeWhere((f) => folderTombstones.containsKey(f.id));
       // 4. 筆記
@@ -1215,18 +1279,20 @@ class VaultStore extends ChangeNotifier {
 
   // ───────────────────────── 存檔 ─────────────────────────
 
+  String _snapshotJson() => jsonEncode({
+        'v': 1,
+        'notes': notes.map((n) => n.toJson()).toList(),
+        'folders': folders.map((f) => f.toJson()).toList(),
+        'tomb': _writeTomb(tombstones),
+        'ftomb': _writeTomb(folderTombstones),
+        'lockpw': _lockJson(),
+      });
+
   Future<void> _persist() {
     final dek = _dek;
     if (dek == null) return Future<void>.value();
     // 先在同步階段取得快照，之後的修改不會混進這次存檔。
-    final json = jsonEncode({
-      'v': 1,
-      'notes': notes.map((n) => n.toJson()).toList(),
-      'folders': folders.map((f) => f.toJson()).toList(),
-      'tomb': _writeTomb(tombstones),
-      'ftomb': _writeTomb(folderTombstones),
-      'lockpw': _lockJson(),
-    });
+    final json = _snapshotJson();
     _saveChain = _saveChain.then((_) async {
       final enc = await VaultCrypto.encrypt(utf8.encode(json), dek);
       await _atomicWrite(_vaultFile, enc);

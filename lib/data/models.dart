@@ -2,15 +2,21 @@ import '../i18n.dart';
 enum NoteType { note, login }
 
 class Folder {
-  Folder({required this.id, required this.name});
+  Folder({required this.id, required this.name, DateTime? updatedAt})
+      : updatedAt = updatedAt ?? DateTime.fromMillisecondsSinceEpoch(0);
 
   final String id;
   String name;
+  DateTime updatedAt; // 建立／改名的時間，同步時用來判斷哪一邊的名稱較新
 
-  Map<String, dynamic> toJson() => {'id': id, 'name': name};
+  Map<String, dynamic> toJson() =>
+      {'id': id, 'name': name, 'updatedAt': updatedAt.toIso8601String()};
 
-  factory Folder.fromJson(Map<String, dynamic> j) =>
-      Folder(id: j['id'] as String, name: (j['name'] as String?) ?? '');
+  factory Folder.fromJson(Map<String, dynamic> j) => Folder(
+        id: j['id'] as String,
+        name: (j['name'] as String?) ?? '',
+        updatedAt: DateTime.tryParse((j['updatedAt'] as String?) ?? ''),
+      );
 }
 
 /// 一組帳號＋密碼。同一則「帳號密碼」筆記可以有很多組（例如多個 Google 帳號）。

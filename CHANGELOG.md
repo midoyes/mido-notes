@@ -1,5 +1,21 @@
 # 更新紀錄
 
+## 2.7.2
+資料完整性與同步修正：
+- 同步：只要有附件讀取失敗，就取消上傳並提示，不再用不完整的備份覆蓋雲端上完整的資料。
+- 同步：上傳前會再確認雲端沒有被另一台裝置剛更新，有的話先重新合併再上傳，降低兩台同時同步時互相覆蓋的機會。
+- 同步：資料夾改名、新增現在也會同步到其他裝置（原本只有筆記會）。
+- 鎖定時若資料還是寫不進磁碟（例如空間不足），未存下的內容會加密保留在記憶體，下次解鎖時自動補存，不再因鎖定而遺失。
+- 還原／同步備份時檢查附件代號格式，擋掉不合法的代號，避免特製備份寫到其他位置。
+
+English:
+Data integrity and sync fixes:
+- Sync: if any attachment cannot be read, the upload is cancelled with a message instead of overwriting the complete data in the cloud with an incomplete backup.
+- Sync: before uploading, the app re-checks that no other device has just updated the cloud file and re-merges if so, reducing overwrites when two devices sync at nearly the same time.
+- Sync: creating and renaming folders now syncs to other devices too (previously only notes did).
+- If data still cannot be written to disk when the vault locks (e.g. storage full), the unsaved content is kept encrypted in memory and saved again on the next unlock instead of being lost.
+- Restore / sync now validates attachment IDs and rejects invalid ones, so a crafted backup cannot write outside the app's attachment folder.
+
 ## 2.7.1
 修正：
 - Windows（視窗較寬時）首頁「格狀」顯示的記事本卡片過大：視窗寬度超過 600 時，改為固定卡片大小、依視窗寬度自動增加欄數。手機畫面不受影響。

@@ -97,6 +97,11 @@ class SyncService extends ChangeNotifier with WidgetsBindingObserver {
       final file = await drive.find();
       final snap = vault.lastChangeAt;
       final data = await vault.buildBackup(pw);
+      if (vault.lastBackupMissing > 0) {
+        throw SyncException(
+          tr('有 ${vault.lastBackupMissing} 個附件讀取失敗（可能已損毀或遺失），已取消上傳，以保護雲端上的資料。請先檢查那些筆記的圖片／錄音。'),
+        );
+      }
       final up = await drive.upload(data, id: file?.id);
       await appSettings.setSyncState(
         remoteMd5: up.md5 ?? '',
@@ -199,6 +204,8 @@ class SyncService extends ChangeNotifier with WidgetsBindingObserver {
     notifyListeners();
     var ok = false;
     try {
+     var done = false;
+     for (var attempt = 0; attempt < 3 && !done; attempt++) {
       final dirtyBefore = _isDirty;
       final file = await drive.find();
       var push = file == null || dirtyBefore;
@@ -222,10 +229,16 @@ class SyncService extends ChangeNotifier with WidgetsBindingObserver {
       if (push) {
         final snap = vault.lastChangeAt;
         final data = await vault.buildBackup(pw);
-        final up = await drive.upload(data, id: file?.id);
         if (vault.lastBackupMissing > 0) {
-          lastWarning = tr('有 ${vault.lastBackupMissing} 個附件讀取失敗，沒有同步上去。');
+          // 附件不完整就不要覆蓋雲端上完整的版本
+          throw SyncException(
+            tr('有 ${vault.lastBackupMissing} 個附件讀取失敗（可能已損毀或遺失），已取消上傳，以保護雲端上的資料。請先檢查那些筆記的圖片／錄音。'),
+          );
         }
+        // 上傳前再確認雲端沒有被其他裝置剛更新；有的話重新合併一次，避免互相覆蓋。
+        final latest = await drive.find();
+        if ((latest?.md5 ?? '') != (file?.md5 ?? '')) continue;
+        final up = await drive.upload(data, id: file?.id);
         await appSettings.setSyncState(
           remoteMd5: up.md5 ?? '',
           uploadedChange: snap?.toIso8601String() ?? '',
@@ -237,6 +250,11 @@ class SyncService extends ChangeNotifier with WidgetsBindingObserver {
         );
       }
       await appSettings.setSyncState(lastSyncAt: DateTime.now());
+      done = true;
+     }
+     if (!done) {
+       throw SyncException(tr('雲端資料一直被其他裝置更新，請稍後再按一次「立即同步」。'));
+     }
       ok = true;
     } catch (e) {
       lastError = _msg(e);
