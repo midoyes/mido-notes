@@ -9,6 +9,19 @@ class ChangelogEntry {
 
 const List<ChangelogEntry> kChangelog = <ChangelogEntry>[
   ChangelogEntry(
+    '2.8.0',
+    [
+      '新增記事提醒：每則筆記可設定提醒日期與時間，時間到響鈴並跳出對話框（只顯示標題）。',
+      '首頁卡片顯示鬧鐘圖示，新增「提醒」分類；提醒時間會跟著同步。',
+      'App 需開著且已解鎖才會響；關閉或鎖定期間到期的提醒會在下次開啟／解鎖時補上。',
+    ],
+    [
+      'New note reminders: set a date and time on any note; the app rings and shows a dialog (title only) when it is due.',
+      'Cards show an alarm icon and there is a new "Reminders" filter; reminder times sync too.',
+      'The app must be open and unlocked to ring; reminders due while closed or locked appear on the next open / unlock.',
+    ],
+  ),
+  ChangelogEntry(
     '2.7.2',
     [
       '同步：附件讀取失敗時取消上傳，不再用不完整的備份覆蓋雲端資料。',

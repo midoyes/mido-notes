@@ -11,6 +11,7 @@ import 'ui/lock_guard.dart';
 import 'ui/media_utils.dart';
 import 'ocr.dart';
 import 'i18n.dart';
+import 'reminder.dart';
 import 'sync/sync_service.dart';
 
 /// 把錯誤寫到桌面的 mido_error.log，方便回報問題（只記錄錯誤，不含筆記內容）。
@@ -47,6 +48,7 @@ Future<void> main() async {
   cleanOcrTemp();
   cleanMediaTemp(); // 清掉上次播放影片／錄音時留下的解密暫存檔
   syncService.init();
+  reminderService.init();
   // 每次鎖定（含無主密碼模式）都立刻清掉解密暫存檔，不必等到下次開啟
   vault.addBeforeLock(() async {
     await cleanMediaTemp();
@@ -99,6 +101,7 @@ class MidoApp extends StatelessWidget {
         return MaterialApp(
           key: ValueKey<String>(uiLang),
           title: tr('Mido筆記'),
+          navigatorKey: navigatorKey,
           debugShowCheckedModeBanner: false,
           locale: uiLang == 'en' ? const Locale('en') : const Locale('zh', 'TW'),
           supportedLocales: const [Locale('zh', 'TW'), Locale('en')],

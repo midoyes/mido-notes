@@ -36,6 +36,23 @@ class MainActivity : FlutterFragmentActivity() {
                 }
             }
 
+        // 提醒鈴聲：播放系統預設的通知音
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "mido_notes/alert")
+            .setMethodCallHandler { call, result ->
+                if (call.method == "ring") {
+                    try {
+                        val uri = android.media.RingtoneManager.getDefaultUri(
+                            android.media.RingtoneManager.TYPE_NOTIFICATION
+                        )
+                        android.media.RingtoneManager.getRingtone(applicationContext, uri)?.play()
+                    } catch (t: Throwable) {
+                    }
+                    result.success(null)
+                } else {
+                    result.notImplemented()
+                }
+            }
+
         // AI 文字辨識（PaddleOCR 模型，離線）
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "mido_notes/ocr")
             .setMethodCallHandler { call, result ->

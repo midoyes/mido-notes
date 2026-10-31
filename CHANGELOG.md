@@ -1,5 +1,21 @@
 # 更新紀錄
 
+## 2.8.0
+新功能：
+- 記事提醒：每則筆記可以設定提醒日期與時間（編輯畫面右上角「⋮」→「設定提醒」，或首頁卡片選單／長按選單）。可選「1 小時後」「今天 20:00」「明天 09:00」或自訂日期時間。
+- 時間到時，App 會響鈴並跳出對話框，只顯示記事的標題（不顯示內容），可選「開啟」（打開記事）、「10 分鐘後再提醒」或「完成」；沒處理的提醒每分鐘再響一次。Android 使用系統通知音，Windows 使用系統提示音。
+- 首頁卡片有提醒的會顯示鬧鐘圖示（已過期為紅色），並新增「提醒」分類，依提醒時間排序。
+- 提醒時間會跟著筆記一起同步到其他裝置。
+- 注意：這一版的提醒需要 App 開著（含最小化）而且已解鎖才會響；App 關閉或鎖定中到期的提醒，會在下次開啟、解鎖時補上。
+
+English:
+New feature:
+- Note reminders: every note can have a reminder date and time (editor top-right "⋮" → "Set reminder", or the card menu / long-press menu on the home screen). Choose "In 1 hour", "Today 20:00", "Tomorrow 09:00" or a custom date and time.
+- When the time comes the app rings and shows a dialog with the note's title only (not its content); choose "Open", "Remind in 10 min" or "Complete". Unhandled reminders ring again every minute. Android uses the system notification sound, Windows the system alert sound.
+- Cards with a reminder show an alarm icon (red when overdue), and a new "Reminders" filter lists them sorted by time.
+- Reminder times sync to your other devices together with the note.
+- Note: in this version reminders ring only while the app is open (minimized is fine) and unlocked; reminders that come due while the app is closed or locked appear the next time you open or unlock it.
+
 ## 2.7.2
 資料完整性與同步修正：
 - 同步：只要有附件讀取失敗，就取消上傳並提示，不再用不完整的備份覆蓋雲端上完整的資料。

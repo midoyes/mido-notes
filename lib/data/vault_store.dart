@@ -625,6 +625,38 @@ class VaultStore extends ChangeNotifier {
     _persist();
   }
 
+  /// 設定（或清除，[at] 為 null）提醒時間。
+  void setReminder(String id, DateTime? at) {
+    final n = byId(id);
+    if (n == null) return;
+    n.remindAt = at;
+    n.remindDone = false;
+    n.updatedAt = DateTime.now();
+    notifyListeners();
+    _persist();
+  }
+
+  /// 這次提醒處理完了（不再跳出）。
+  void completeReminder(String id) {
+    final n = byId(id);
+    if (n == null || n.remindAt == null) return;
+    n.remindDone = true;
+    n.updatedAt = DateTime.now();
+    notifyListeners();
+    _persist();
+  }
+
+  /// 稍後再提醒：從現在起算 [d] 之後。
+  void snoozeReminder(String id, Duration d) {
+    final n = byId(id);
+    if (n == null) return;
+    n.remindAt = DateTime.now().add(d);
+    n.remindDone = false;
+    n.updatedAt = DateTime.now();
+    notifyListeners();
+    _persist();
+  }
+
   void setPinned(String id, bool pinned) {
     final n = byId(id);
     if (n == null) return;

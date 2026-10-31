@@ -42,6 +42,7 @@ Encrypted notes and password manager for Android and Windows, built with Flutter
 
 | Version | Highlights / 重點 |
 |---|---|
+| 2.8.0 | Note reminders (date/time, ring + dialog with title only) / 記事提醒（設定日期時間、響鈴並跳出只顯示標題的對話框） |
 | 2.7.2 | Sync & data-integrity fixes (incomplete-attachment guard, folder sync, unsaved-data recovery) / 同步與資料完整性修正 |
 | 2.7.1 | Fix oversized note cards in grid view on wide Windows windows / 修正 Windows 視窗較寬時格狀卡片過大 |
 | 2.7.0 | Cloud sync via your own Google Drive (encrypted, optional) / 雲端同步：用自己的 Google 雲端硬碟在多台裝置間同步（加密、選用） |

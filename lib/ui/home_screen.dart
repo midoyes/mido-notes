@@ -7,6 +7,7 @@ import '../data/models.dart';
 import 'backup_screen.dart';
 import 'common.dart';
 import 'editor_screen.dart';
+import 'reminder_picker.dart';
 import 'settings_screen.dart';
 import 'trash_screen.dart';
 import '../i18n.dart';
@@ -277,6 +278,13 @@ class _HomeScreenState extends State<HomeScreen> {
         await toggleNoteLock(context, n);
       case 'pin':
         vault.setPinned(n.id, !n.pinned);
+      case 'remind':
+        final r = await pickReminder(
+          context,
+          current: n.remindActive ? n.remindAt : null,
+        );
+        if (r == null) return;
+        vault.setReminder(n.id, r.clear ? null : r.at);
       case 'color':
         final c = await pickNoteColor(context, n.color);
         if (c != null) vault.setColor(n.id, c);
@@ -371,6 +379,8 @@ class _HomeScreenState extends State<HomeScreen> {
       list = list.where((n) => n.type == NoteType.login);
     } else if (_filter == 'text') {
       list = list.where((n) => n.type == NoteType.note);
+    } else if (_filter == 'remind') {
+      list = list.where((n) => n.remindActive);
     } else if (_currentFolderId != null) {
       list = list.where((n) => n.folderId == _currentFolderId);
     } else if (_currentTag != null) {
@@ -379,6 +389,8 @@ class _HomeScreenState extends State<HomeScreen> {
     final out = list.toList();
     if (inTrash) {
       out.sort((a, b) => b.deletedAt!.compareTo(a.deletedAt!));
+    } else if (_filter == 'remind' && q.isEmpty) {
+      out.sort((a, b) => a.remindAt!.compareTo(b.remindAt!));
     } else {
       out.sort(_comparator());
     }
@@ -903,6 +915,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _chips() {
     final trashCount = vault.notes.where((n) => n.isTrashed).length;
+    final remindCount =
+        vault.notes.where((n) => !n.isTrashed && n.remindActive).length;
     Widget chip(
       String id,
       String label, {
@@ -933,6 +947,8 @@ class _HomeScreenState extends State<HomeScreen> {
           chip('all', tr('全部')),
           chip('text', tr('文字筆記'), icon: Icons.edit_note),
           chip('login', tr('帳號密碼'), icon: Icons.key),
+          if (remindCount > 0)
+            chip('remind', tr('提醒 ($remindCount)'), icon: Icons.alarm),
           chip(
             'trash',
             trashCount > 0 ? tr('回收桶 ($trashCount)') : tr('回收桶'),
@@ -1118,6 +1134,10 @@ class _HomeScreenState extends State<HomeScreen> {
         if (_currentTag != null && !vault.sortedTags.contains(_currentTag)) {
           _filter = 'all';
         }
+        if (_filter == 'remind' &&
+            !vault.notes.any((n) => !n.isTrashed && n.remindActive)) {
+          _filter = 'all'; // 提醒都處理完了，「提醒」分類會消失，回到全部
+        }
         final notes = _visible();
         final remindDays =
             (_filter == 'trash' || _searching) ? null : _reminderDays();
@@ -1156,6 +1176,7 @@ List<MapEntry<String, String>> noteMenuItems(Note note) {
     if (isLogin && note.credentials.isNotEmpty)
       MapEntry('copy', tr('快速複製帳號 / 密碼')),
     MapEntry('pin', note.pinned ? tr('取消釘選') : tr('釘選')),
+    MapEntry('remind', note.remindActive ? tr('修改／取消提醒') : tr('設定提醒')),
     MapEntry('lock', note.locked ? tr('解除鎖定') : tr('鎖定（需輸入鎖定密碼）')),
     MapEntry('color', tr('筆記顏色')),
     MapEntry('folder', tr('移到資料夾')),
@@ -1211,6 +1232,12 @@ class _NoteCard extends StatelessWidget {
             style: tt.titleMedium?.copyWith(fontWeight: FontWeight.w600),
           ),
         ),
+        if (note.remindActive && !note.isTrashed)
+          Icon(
+            Icons.alarm,
+            size: 16,
+            color: note.remindAt!.isBefore(DateTime.now()) ? cs.error : cs.primary,
+          ),
         if (note.locked) Icon(Icons.lock, size: 16, color: cs.primary),
         if (note.pinned) Icon(Icons.push_pin, size: 16, color: cs.primary),
         if (!note.isTrashed)

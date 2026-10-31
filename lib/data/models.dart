@@ -75,6 +75,8 @@ class Note {
     this.color = 0,
     this.locked = false,
     this.deletedAt,
+    this.remindAt,
+    this.remindDone = false,
     List<String>? imageIds,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -98,11 +100,16 @@ class Note {
   int color; // 0 = 無，1~8 = 調色盤顏色
   bool locked; // 需要「鎖定密碼」才能開啟
   DateTime? deletedAt;
+  DateTime? remindAt; // 提醒時間（null = 沒有提醒）
+  bool remindDone; // 這次提醒已處理（按了「完成」）
   List<String> imageIds;
   final DateTime createdAt;
   DateTime updatedAt;
 
   bool get isTrashed => deletedAt != null;
+
+  /// 有設定提醒、而且還沒處理。
+  bool get remindActive => remindAt != null && !remindDone;
 
   bool get isBlank =>
       title.trim().isEmpty &&
@@ -126,6 +133,8 @@ class Note {
         'color': color,
         'locked': locked,
         'deletedAt': deletedAt?.toIso8601String(),
+        'remindAt': remindAt?.toIso8601String(),
+        'remindDone': remindDone,
         'imageIds': imageIds,
         'createdAt': createdAt.toIso8601String(),
         'updatedAt': updatedAt.toIso8601String(),
@@ -174,6 +183,8 @@ class Note {
       color: (j['color'] as int?) ?? 0,
       locked: (j['locked'] as bool?) ?? false,
       deletedAt: DateTime.tryParse((j['deletedAt'] as String?) ?? ''),
+      remindAt: DateTime.tryParse((j['remindAt'] as String?) ?? ''),
+      remindDone: (j['remindDone'] as bool?) ?? false,
       imageIds: ((j['imageIds'] as List?) ?? const <dynamic>[])
           .map((e) => e as String)
           .toList(),

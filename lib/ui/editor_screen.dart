@@ -21,6 +21,7 @@ import 'media_utils.dart';
 import 'ocr_dialog.dart';
 import '../ocr.dart';
 import 'record_dialog.dart';
+import 'reminder_picker.dart';
 import '../i18n.dart';
 
 /// 可以把「搜尋到的關鍵字」標上底色的輸入控制器。
@@ -277,6 +278,19 @@ class _EditorScreenState extends State<EditorScreen> with WidgetsBindingObserver
     final c = await pickNoteColor(context, _note.color);
     if (c == null) return;
     setState(() => _note.color = c);
+    _touched();
+  }
+
+  Future<void> _chooseRemind() async {
+    final r = await pickReminder(
+      context,
+      current: _note.remindActive ? _note.remindAt : null,
+    );
+    if (r == null || !mounted) return;
+    setState(() {
+      _note.remindAt = r.clear ? null : r.at;
+      _note.remindDone = false;
+    });
     _touched();
   }
 
@@ -1575,6 +1589,8 @@ class _EditorScreenState extends State<EditorScreen> with WidgetsBindingObserver
               onSelected: (v) {
                 if (v == 'folder') {
                   _chooseFolder();
+                } else if (v == 'remind') {
+                  _chooseRemind();
                 } else if (v == 'color') {
                   _chooseColor();
                 } else if (v == 'lock') {
@@ -1587,6 +1603,10 @@ class _EditorScreenState extends State<EditorScreen> with WidgetsBindingObserver
               },
               itemBuilder: (_) => [
                 PopupMenuItem(value: 'folder', child: Text(tr('移到資料夾'))),
+                PopupMenuItem(
+                  value: 'remind',
+                  child: Text(_note.remindActive ? tr('修改／取消提醒') : tr('設定提醒')),
+                ),
                 PopupMenuItem(value: 'color', child: Text(tr('筆記顏色'))),
                 PopupMenuItem(
                   value: 'lock',
@@ -1628,6 +1648,32 @@ class _EditorScreenState extends State<EditorScreen> with WidgetsBindingObserver
                             avatar: const Icon(Icons.folder_outlined, size: 16),
                             label: Text(folderName),
                             visualDensity: VisualDensity.compact,
+                          ),
+                        ),
+                      ),
+                    if (_note.remindActive)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: InputChip(
+                            avatar: Icon(
+                              Icons.alarm,
+                              size: 16,
+                              color: _note.remindAt!.isBefore(DateTime.now())
+                                  ? cs.error
+                                  : cs.primary,
+                            ),
+                            label: Text(fmtDate(_note.remindAt!, full: true)),
+                            visualDensity: VisualDensity.compact,
+                            onPressed: _chooseRemind,
+                            onDeleted: () {
+                              setState(() {
+                                _note.remindAt = null;
+                                _note.remindDone = false;
+                              });
+                              _touched();
+                            },
                           ),
                         ),
                       ),
